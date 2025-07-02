@@ -142,7 +142,7 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# === Generate button ===
+# Generate Letter
 if st.button("Generate Letter"):
     docx_path = generate_docx(template_files[letter_type], context)
     st.success("Word letter generated successfully.")
