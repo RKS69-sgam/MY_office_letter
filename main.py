@@ -1,7 +1,7 @@
 
 import streamlit as st
 import pandas as pd
-from datetime import date
+from datetime import date, timedelta
 from docx import Document
 from tempfile import NamedTemporaryFile
 import base64
@@ -58,7 +58,7 @@ col_hrms = 2
 col_unit = 4
 col_english_name = 5
 col_hindi_name = 13
-col_designation = 14
+col_designation = 18  # Column 19
 
 # Display Format: PF - HRMS - UNIT - English Name
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row[col_unit]} - {row[col_english_name]}", axis=1)
@@ -78,7 +78,11 @@ letter_type = st.selectbox("Select Letter Type:", [
 letter_date = st.date_input("Select Letter Date", date.today())
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-duty_date = st.date_input("Join Duty Date") if "Duty" in letter_type else None
+
+# Auto-fill Join Duty Date = To Date + 1 day if "Duty Letter"
+duty_date_default = (to_date + timedelta(days=1)) if to_date else date.today()
+duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
+
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
