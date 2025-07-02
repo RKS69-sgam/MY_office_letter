@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from docx import Document
-from io import BytesIO
 from tempfile import NamedTemporaryFile
 import base64
 import os
@@ -13,13 +12,12 @@ def load_employee_data():
     df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
     return df
 
+# Replace placeholders in both paragraphs and tables
 def replace_placeholders(doc, context):
-    # Replace in paragraphs
     for p in doc.paragraphs:
         for key, val in context.items():
             if f"[{key}]" in p.text:
                 p.text = p.text.replace(f"[{key}]", str(val))
-    # Replace in tables
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -27,6 +25,7 @@ def replace_placeholders(doc, context):
                     if f"[{key}]" in cell.text:
                         cell.text = cell.text.replace(f"[{key}]", str(val))
 
+# Generate Word letter
 def generate_docx(template_path, context):
     doc = Document(template_path)
     replace_placeholders(doc, context)
@@ -34,6 +33,7 @@ def generate_docx(template_path, context):
     doc.save(temp_file.name)
     return temp_file.name
 
+# Optional: Convert to PDF (Only works on Windows)
 def convert_to_pdf(docx_path):
     try:
         from docx2pdf import convert
@@ -43,6 +43,7 @@ def convert_to_pdf(docx_path):
     except:
         return None
 
+# File download button
 def download_button(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
@@ -50,17 +51,17 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
+# Load data
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Safe column mapping
-col_pf = 2
-col_unit = 5
-col_empname = 6
-col_shortname = 14
-col_designation = 17
+# Correct column indexes
+col_pf = 1
+col_unit = 4
+col_empname = 13
+col_designation = 16
 
 # Employee Selection
 employee_names = df.iloc[:, col_empname].dropna().tolist()
@@ -86,7 +87,7 @@ memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# Context dictionary
+# Placeholder replacement context
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": selected_emp,
@@ -109,15 +110,15 @@ template_files = {
     "Exam NOC": "assets/Exam NOC Letter temp.docx"
 }
 
-# Submit Button
+# Generate Button
 if st.button("Generate Letter"):
     docx_path = generate_docx(template_files[letter_type], context)
-    st.success("Word letter generated successfully.")
+    st.success("✅ Word letter generated successfully.")
     download_button(docx_path, "⬇️ Download Word Letter")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
-        st.success("PDF letter generated successfully.")
+        st.success("✅ PDF letter generated successfully.")
         download_button(pdf_path, "⬇️ Download PDF Letter")
     else:
-        st.warning("PDF conversion not supported on this platform.")
+        st.warning("⚠️ PDF conversion not supported on this platform.")
