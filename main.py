@@ -50,10 +50,11 @@ def download_button(file_path, label):
 def format_unit(unit_val):
     try:
         unit_str = str(unit_val).strip()
+        if "/" in unit_str:
+            unit_str = unit_str.split("/")[0].strip()
         if unit_str.isdigit():
             return unit_str[:2]
-        else:
-            return unit_str
+        return unit_str
     except:
         return ""
 
@@ -62,15 +63,13 @@ sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Column Index Mapping
 col_pf = 1
 col_hrms = 2
 col_unit = 4
 col_english_name = 5
 col_hindi_name = 13
-col_designation = 18  # Column 19
+col_designation = 18
 
-# Display Format: PF - HRMS - formatted UNIT - English Name
 df["FormattedUnit"] = df.iloc[:, col_unit].apply(format_unit)
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['FormattedUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
@@ -90,7 +89,6 @@ letter_type = st.selectbox("Select Letter Type:", [
 letter_date = st.date_input("Select Letter Date", date.today())
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-
 duty_date_default = (to_date + timedelta(days=1)) if to_date else date.today()
 duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
 
