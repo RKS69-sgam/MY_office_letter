@@ -27,6 +27,10 @@ def format_unit(unit_val, station_val):
     except:
         return ""
 
+# === Sanitize filenames ===
+def sanitize_filename(s):
+    return "".join(c if c.isalnum() or c in (' ', '_', '-') else '_' for c in str(s)).strip().replace(" ", "_")
+
 # === Load employee data ===
 @st.cache_data
 def load_employee_data():
@@ -43,7 +47,6 @@ df["Dropdown"] = df.apply(
     lambda row: f"PF:{row[col_pf]}, HRMS:{row[col_hrms]}, Unit:{format_unit(row[col_unit], row[col_station])}, {row[col_eng_name]}",
     axis=1
 )
-
 dropdown_list = ["-- Select Employee --"] + df["Dropdown"].tolist()
 selected_dropdown = st.selectbox("Select Employee (with details):", dropdown_list)
 
@@ -61,13 +64,10 @@ letter_type = st.selectbox("Select Letter Type:", [
     "Exam NOC"
 ])
 letter_date = st.date_input("Select Letter Date", date.today())
-
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-# Join duty date = to_date + 1 by default
 duty_date_default = (to_date + timedelta(days=1)) if to_date else None
 duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
-
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
@@ -115,9 +115,13 @@ def generate_docx(template_path, context):
     temp_file = NamedTemporaryFile(delete=False, suffix=".docx")
     doc.save(temp_file.name)
 
-    final_name = f"Letter_{context['PFNumber']}_{context['EmployeeName']}_{context['LetterDate'].replace('-', '')}.docx"
+    empname_safe = sanitize_filename(context['EmployeeName'])
+    pf_safe = sanitize_filename(context['PFNumber'])
+    date_safe = context['LetterDate'].replace("-", "")
+    final_name = f"Letter_{pf_safe}_{empname_safe}_{date_safe}.docx"
     final_path = os.path.join(os.path.dirname(temp_file.name), final_name)
-    shutil.copy(temp_file.name, final_path)
+
+    shutil.copyfile(temp_file.name, final_path)
     return final_path
 
 # === Optional PDF converter ===
