@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
@@ -53,11 +52,13 @@ def correct_unit_station_format(unit_val, station_val):
         if "/" in unit_str:
             unit_str = unit_str.split("/")[0].strip()
         if unit_str.isdigit():
-            return unit_str[:2]
-        return unit_str
+            unit_str = unit_str[:2]
+        station_str = str(station_val).strip()
+        return f"{unit_str}/{station_str}"
     except:
         return ""
 
+# Load and process employee data
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
@@ -68,17 +69,20 @@ col_hrms = 2
 col_unit = 4
 col_english_name = 5
 col_hindi_name = 13
-col_designation = 18
+col_designation = 18  # Column 19 (index starts from 0)
 
+# Unit + Station
 df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[7]), axis=1)
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
+
+# Select employee
 selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
-
 english_name = selected_row[col_english_name]
 hindi_name = selected_row[col_hindi_name]
-formatted_unit = format_unit(selected_row[col_unit])
+
+# Letter options
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -91,7 +95,6 @@ from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
 duty_date_default = (to_date + timedelta(days=1)) if to_date else date.today()
 duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
-
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
@@ -121,11 +124,11 @@ if st.button("Generate Letter"):
     base_filename = f"{letter_type.split()[0]}_{english_name}_{letter_date.strftime('%d-%m-%Y')}"
     docx_path = generate_docx(template_files[letter_type], context, base_filename)
     st.success("Word letter generated successfully.")
-    download_button(docx_path, f"â¬‡ï¸ Download {os.path.basename(docx_path)}")
+    download_button(docx_path, f"⬇️ Download {os.path.basename(docx_path)}")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
         st.success("PDF letter generated successfully.")
-        download_button(pdf_path, f"â¬‡ï¸ Download {os.path.basename(pdf_path)}")
+        download_button(pdf_path, f"⬇️ Download {os.path.basename(pdf_path)}")
     else:
         st.warning("PDF conversion not supported on this platform.")
