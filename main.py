@@ -71,7 +71,9 @@ col_hindi_name = 13
 col_designation = 18
 
 df["FormattedUnit"] = df.iloc[:, col_unit].apply(format_unit)
-df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['FormattedUnit']} - {row[col_english_name]}", axis=1)
+df["Station"] = df.iloc[:, 7].astype(str).str.strip()
+df["DisplayUnit"] = df["FormattedUnit"] + "/" + df["Station"]
+df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
@@ -100,7 +102,7 @@ context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": hindi_name,
     "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
-    "UnitNumber": formatted_unit,
+    "UnitNumber": selected_row["DisplayUnit"],
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
     "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
     "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
