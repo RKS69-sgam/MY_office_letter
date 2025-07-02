@@ -56,9 +56,9 @@ selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
 # Safe column mapping
-col_pf = 1
-col_unit = 3
-col_empname = 4
+col_pf = 2
+col_unit = 5
+col_empname = 6
 col_shortname = 14
 col_designation = 17
 
