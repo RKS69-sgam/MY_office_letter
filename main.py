@@ -70,7 +70,7 @@ memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# === Prepare context
+# === Context for placeholders
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": selected_row[col_hindi_name],
@@ -138,22 +138,25 @@ def get_file_name(selected_row, letter_type, letter_date):
     date_str = letter_date.strftime("%Y%m%d")
     return f"{eng_name}_{letter_type.replace(' ', '_')}_{date_str}"
 
-# Generate temp file
-temp_path = generate_docx(template_files[letter_type], context, base_file_name)
+# === Generate Letter
+if st.button("Generate Letter"):
+    base_file_name = get_file_name(selected_row, letter_type, letter_date)
+    output_dir = "generated_files"
+    os.makedirs(output_dir, exist_ok=True)
 
-# Rename temp file to desired name
-final_docx_path = os.path.join(os.path.dirname(temp_path), base_file_name + ".docx")
-os.rename(temp_path, final_docx_path)
+    final_docx_path = os.path.join(output_dir, base_file_name + ".docx")
+    final_pdf_path = os.path.join(output_dir, base_file_name + ".pdf")
 
-st.success(f"Word letter generated: {os.path.basename(final_docx_path)}")
-download_button(final_docx_path, "⬇️ Download Word Letter")
+    temp_docx = generate_docx(template_files[letter_type], context, base_file_name)
+    os.rename(temp_docx, final_docx_path)
 
-# Convert to PDF and rename if possible
-pdf_path = convert_to_pdf(final_docx_path)
-if pdf_path and os.path.exists(pdf_path):
-    final_pdf_path = os.path.join(os.path.dirname(pdf_path), base_file_name + ".pdf")
-    os.rename(pdf_path, final_pdf_path)
-    st.success(f"PDF letter generated: {os.path.basename(final_pdf_path)}")
-    download_button(final_pdf_path, "⬇️ Download PDF Letter")
-else:
-    st.warning("PDF conversion not supported on this platform.")
+    st.success(f"Word letter generated: {os.path.basename(final_docx_path)}")
+    download_button(final_docx_path, "⬇️ Download Word Letter")
+
+    pdf_temp = convert_to_pdf(final_docx_path)
+    if pdf_temp and os.path.exists(pdf_temp):
+        os.rename(pdf_temp, final_pdf_path)
+        st.success(f"PDF letter generated: {os.path.basename(final_pdf_path)}")
+        download_button(final_pdf_path, "⬇️ Download PDF Letter")
+    else:
+        st.warning("PDF conversion not supported on this platform.")
