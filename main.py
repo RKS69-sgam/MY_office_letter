@@ -9,14 +9,8 @@ import os
 # Load Employee Data
 @st.cache_data
 def load_employee_data():
-    df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsm", sheet_name=None)
+    df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
     return df
-
-def format_unit(unit_val, station_val):
-    unit_str = str(unit_val).strip().split("/")[0]
-    if any(c.isalpha() for c in unit_str):
-        return unit_str + "/" + str(station_val).strip()
-    return unit_str[:2] + "/" + str(station_val).strip()
 
 def replace_placeholders(doc, context):
     for p in doc.paragraphs:
@@ -53,48 +47,55 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# Column Indexes (0-based)
-col_pf = 1
-col_hrms = 2
-col_unit = 4
-col_eng_name = 5
-col_hindi_name = 13
-col_designation = 18
-col_station = 8
+def format_unit(unit, station):
+    unit_str = str(unit)
+    if unit_str.isdigit():
+        return unit_str[:2] + "/" + str(station)
+    else:
+        return unit_str + "/" + str(station)
 
+# Load data
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Build Dropdown Format
+# Column mapping
+col_pf = 1
+col_hrms = 2
+col_unit = 4
+col_station = 8
+col_eng_name = 5
+col_hindi_name = 13
+col_designation = 18
+
+# Dropdown with full details
 df["Dropdown"] = df.apply(
     lambda row: f"(PF:{row[col_pf]}, HRMS:{row[col_hrms]}, Unit:{format_unit(row[col_unit], row[col_station])}) {row[col_eng_name]}",
     axis=1
 )
-
 selected_dropdown = st.selectbox("Select Employee (with details):", df["Dropdown"].tolist())
 selected_row = df[df["Dropdown"] == selected_dropdown].iloc[0]
 
-# Letter Options
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
     "Sick Memo",
     "Exam NOC"
 ])
-
 letter_date = st.date_input("Select Letter Date", date.today())
 
-# Inputs for different letter types
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-duty_date = st.date_input("Join Duty Date", to_date + timedelta(days=1)) if "Duty" in letter_type else None
+
+# Auto-fill Join Duty Date as next day of To Date
+default_duty_date = (to_date + timedelta(days=1)) if to_date else date.today()
+duty_date = st.date_input("Join Duty Date", value=default_duty_date) if "Duty" in letter_type else None
+
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# Fill Placeholder Context
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": selected_row[col_hindi_name],
@@ -109,7 +110,6 @@ context = {
     "NOCCount": noc_count
 }
 
-# Templates
 template_files = {
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -119,13 +119,12 @@ template_files = {
 
 if st.button("Generate Letter"):
     docx_path = generate_docx(template_files[letter_type], context)
-    file_name_base = f"{letter_type.replace(' ', '_')} - {selected_row[col_eng_name]}"
     st.success("Word letter generated successfully.")
-    download_button(docx_path, f"⬇️ Download Word Letter: {file_name_base}.docx")
+    download_button(docx_path, "⬇️ Download Word Letter")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
         st.success("PDF letter generated successfully.")
-        download_button(pdf_path, f"⬇️ Download PDF Letter: {file_name_base}.pdf")
+        download_button(pdf_path, "⬇️ Download PDF Letter")
     else:
         st.warning("PDF conversion not supported on this platform.")
