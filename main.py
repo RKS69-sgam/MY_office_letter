@@ -138,17 +138,22 @@ def get_file_name(selected_row, letter_type, letter_date):
     date_str = letter_date.strftime("%Y%m%d")
     return f"{eng_name}_{letter_type.replace(' ', '_')}_{date_str}"
 
-# === Generate Letter
-if st.button("Generate Letter"):
-    base_file_name = get_file_name(selected_row, letter_type, letter_date)
+# Generate temp file
+temp_path = generate_docx(template_files[letter_type], context, base_file_name)
 
-    docx_path = generate_docx(template_files[letter_type], context, base_file_name)
-    st.success("Word letter generated successfully.")
-    download_button(docx_path, "⬇️ Download Word Letter")
+# Rename temp file to desired name
+final_docx_path = os.path.join(os.path.dirname(temp_path), base_file_name + ".docx")
+os.rename(temp_path, final_docx_path)
 
-    pdf_path = convert_to_pdf(docx_path)
-    if pdf_path and os.path.exists(pdf_path):
-        st.success("PDF letter generated successfully.")
-        download_button(pdf_path, "⬇️ Download PDF Letter")
-    else:
-        st.warning("PDF conversion not supported on this platform.")
+st.success(f"Word letter generated: {os.path.basename(final_docx_path)}")
+download_button(final_docx_path, "⬇️ Download Word Letter")
+
+# Convert to PDF and rename if possible
+pdf_path = convert_to_pdf(final_docx_path)
+if pdf_path and os.path.exists(pdf_path):
+    final_pdf_path = os.path.join(os.path.dirname(pdf_path), base_file_name + ".pdf")
+    os.rename(pdf_path, final_pdf_path)
+    st.success(f"PDF letter generated: {os.path.basename(final_pdf_path)}")
+    download_button(final_pdf_path, "⬇️ Download PDF Letter")
+else:
+    st.warning("PDF conversion not supported on this platform.")
