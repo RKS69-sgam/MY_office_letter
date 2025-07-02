@@ -72,7 +72,7 @@ col_hindi_name = 13
 col_designation = 18  # Column 19 (index starts from 0)
 
 # Unit + Station
-df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[7]), axis=1)
+df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[9]), axis=1)
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 
