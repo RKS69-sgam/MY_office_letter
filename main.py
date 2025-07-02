@@ -13,12 +13,23 @@ def load_employee_data():
     df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
     return df
 
-def generate_docx(template_path, context):
-    doc = Document(template_path)
+def replace_placeholders(doc, context):
+    # Replace in paragraphs
     for p in doc.paragraphs:
         for key, val in context.items():
             if f"[{key}]" in p.text:
                 p.text = p.text.replace(f"[{key}]", str(val))
+    # Replace in tables
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, val in context.items():
+                    if f"[{key}]" in cell.text:
+                        cell.text = cell.text.replace(f"[{key}]", str(val))
+
+def generate_docx(template_path, context):
+    doc = Document(template_path)
+    replace_placeholders(doc, context)
     temp_file = NamedTemporaryFile(delete=False, suffix=".docx")
     doc.save(temp_file.name)
     return temp_file.name
@@ -36,7 +47,7 @@ def download_button(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
         b64 = base64.b64encode(data).decode()
-        href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_path.split("/")[-1]}">{label}</a>'
+        href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
 data = load_employee_data()
@@ -44,10 +55,17 @@ sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
+# Safe column mapping
+col_pf = 1
+col_unit = 3
+col_empname = 4
+col_shortname = 14
+col_designation = 17
+
 # Employee Selection
-employee_names = df.iloc[:, 4].dropna().tolist()
+employee_names = df.iloc[:, col_empname].dropna().tolist()
 selected_emp = st.selectbox("Select Employee:", employee_names)
-selected_row = df[df.iloc[:, 4] == selected_emp].iloc[0]
+selected_row = df[df.iloc[:, col_empname] == selected_emp].iloc[0]
 
 # Letter Type
 letter_type = st.selectbox("Select Letter Type:", [
@@ -68,17 +86,17 @@ memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# Context
+# Context dictionary
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": selected_emp,
-    "Designation": selected_row[17] if len(selected_row) > 17 else "",
-    "UnitNumber": selected_row[3] if len(selected_row) > 3 else "",
+    "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
+    "UnitNumber": selected_row[col_unit] if len(selected_row) > col_unit else "",
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
     "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
     "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
     "MEMO": memo_text,
-    "PFNumber": selected_row[1] if len(selected_row) > 1 else "",
+    "PFNumber": selected_row[col_pf] if len(selected_row) > col_pf else "",
     "ExamName": exam_name,
     "NOCCount": noc_count
 }
@@ -102,4 +120,4 @@ if st.button("Generate Letter"):
         st.success("PDF letter generated successfully.")
         download_button(pdf_path, "⬇️ Download PDF Letter")
     else:
-        st.warning("PDF conversion not supported on this platform. Please use desktop to convert.")
+        st.warning("PDF conversion not supported on this platform.")
