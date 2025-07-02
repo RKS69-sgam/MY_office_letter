@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import date
@@ -23,12 +24,12 @@ def replace_placeholders(doc, context):
                     if f"[{key}]" in cell.text:
                         cell.text = cell.text.replace(f"[{key}]", str(val))
 
-def generate_docx(template_path, context):
+def generate_docx(template_path, context, filename):
     doc = Document(template_path)
     replace_placeholders(doc, context)
-    temp_file = NamedTemporaryFile(delete=False, suffix=".docx")
-    doc.save(temp_file.name)
-    return temp_file.name
+    docx_path = os.path.join("/tmp", filename + ".docx")
+    doc.save(docx_path)
+    return docx_path
 
 def convert_to_pdf(docx_path):
     try:
@@ -58,15 +59,12 @@ col_english_name = 5
 col_hindi_name = 13
 col_designation = 14
 
-# Prepare dropdown list with English Name + Unit
 df["DisplayName"] = df.apply(lambda row: f"{row[col_unit]} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 selected_display = st.selectbox("Select Employee (Unit - English Name):", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
 
-# Use Hindi name from column 14
 hindi_name = selected_row[col_hindi_name]
-
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -75,7 +73,6 @@ letter_type = st.selectbox("Select Letter Type:", [
 ])
 
 letter_date = st.date_input("Select Letter Date", date.today())
-
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
 duty_date = st.date_input("Join Duty Date") if "Duty" in letter_type else None
@@ -105,13 +102,14 @@ template_files = {
 }
 
 if st.button("Generate Letter"):
-    docx_path = generate_docx(template_files[letter_type], context)
+    base_filename = f"{letter_type.split()[0]}_{hindi_name}_{letter_date.strftime('%d-%m-%Y')}"
+    docx_path = generate_docx(template_files[letter_type], context, base_filename)
     st.success("Word letter generated successfully.")
-    download_button(docx_path, "⬇️ Download Word Letter")
+    download_button(docx_path, f"â¬‡ï¸ Download {os.path.basename(docx_path)}")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
         st.success("PDF letter generated successfully.")
-        download_button(pdf_path, "⬇️ Download PDF Letter")
+        download_button(pdf_path, f"â¬‡ï¸ Download {os.path.basename(pdf_path)}")
     else:
         st.warning("PDF conversion not supported on this platform.")
