@@ -58,6 +58,7 @@ def correct_unit_station_format(unit_val, station_val):
     except:
         return ""
 
+# Load and process employee data
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
@@ -68,18 +69,20 @@ col_hrms = 2
 col_unit = 4
 col_english_name = 5
 col_hindi_name = 13
-col_designation = 18
+col_designation = 18  # Column 19 (index starts from 0)
 
-df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[8]), axis=1)
+# Unit + Station
+df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[7]), axis=1)
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
-
 display_list = df["DisplayName"].dropna().tolist()
+
+# Select employee
 selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
-
 english_name = selected_row[col_english_name]
 hindi_name = selected_row[col_hindi_name]
 
+# Letter options
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -92,7 +95,6 @@ from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
 duty_date_default = (to_date + timedelta(days=1)) if to_date else date.today()
 duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
-
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
