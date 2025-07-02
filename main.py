@@ -6,7 +6,6 @@ from tempfile import NamedTemporaryFile
 import base64
 import os
 
-# ====== Load Employee Data ======
 @st.cache_data
 def load_employee_data():
     df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
@@ -50,67 +49,65 @@ def download_button(file_path, label):
 # ========== Column Mappings ==========
 col_pf = 1
 col_hrms = 2
-col_unit_raw = 4
-col_emp_eng = 5
+col_unit = 4
+col_eng_name = 5
 col_station = 8
-col_emp_hin = 13
-col_designation = 18  # Col 19 (0-based)
-# =====================================
+col_hin_name = 13
+col_designation = 18
 
+# ========== Load Data ==========
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Drop-down list with Employee Name (Eng), PF, HRMS, Unit
-def format_label(row):
-    return f"{row[col_emp_eng]} (PF: {row[col_pf]}, HRMS: {row[col_hrms]}, Unit: {row[col_unit_raw]})"
+# Format Unit + Station
+def format_unit(unit_raw, station):
+    try:
+        unit_str = str(unit_raw).strip()
+        if "/" in unit_str:
+            unit_str = unit_str.split("/")[0]
+        if unit_str.isdigit():
+            unit_str = unit_str[:2]
+        return f"{unit_str}/{station}"
+    except:
+        return ""
 
-employee_labels = df.apply(format_label, axis=1).tolist()
-selected_label = st.selectbox("Select Employee (with details):", employee_labels)
-selected_index = employee_labels.index(selected_label)
-selected_row = df.iloc[selected_index]
+# Build dropdown list
+df["Dropdown"] = df.apply(
+    lambda row: f"PF: {row[col_pf]} | HRMS: {row[col_hrms]} | Unit: {row[col_unit]} | Name: {row[col_eng_name]}", axis=1
+)
 
-# Letter type
+dropdown_list = df["Dropdown"].dropna().tolist()
+selected_display = st.selectbox("Select Employee:", dropdown_list)
+selected_row = df[df["Dropdown"] == selected_display].iloc[0]
+
+# Get formatted values
+formatted_unit = format_unit(selected_row[col_unit], selected_row[col_station])
+
+# UI inputs
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
     "Sick Memo",
     "Exam NOC"
 ])
-
 letter_date = st.date_input("Select Letter Date", date.today())
+
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-
-# Auto Join Date = ToDate + 1 for Absent Duty
-if "Duty" in letter_type:
-    default_join = to_date + timedelta(days=1) if to_date else date.today()
-    duty_date = st.date_input("Join Duty Date", default_join)
-else:
-    duty_date = None
+default_join = to_date + timedelta(days=1) if to_date else date.today()
+duty_date = st.date_input("Join Duty Date", default_join) if "Duty" in letter_type else None
 
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# ===== Process Unit Number with Station =====
-raw_unit = str(selected_row[col_unit_raw])
-working_station = str(selected_row[col_station])
-if "/" in raw_unit:
-    unit_part = raw_unit.split("/")[0]
-elif raw_unit.isdigit():
-    unit_part = raw_unit[:2]
-else:
-    unit_part = raw_unit
-unit_combined = f"{unit_part}/{working_station}"
-
-# ===== Prepare context =====
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
-    "EmployeeName": selected_row[col_emp_hin],
-    "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
-    "UnitNumber": unit_combined,
+    "EmployeeName": selected_row[col_hin_name],
+    "Designation": selected_row[col_designation],
+    "UnitNumber": formatted_unit,
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
     "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
     "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
@@ -129,12 +126,22 @@ template_files = {
 
 if st.button("Generate Letter"):
     docx_path = generate_docx(template_files[letter_type], context)
-    st.success("Word letter generated successfully.")
+
+    filename_base = f"{letter_type} - {selected_row[col_eng_name]} - {letter_date.strftime('%d-%m-%Y')}"
+    docx_final = os.path.join(os.path.dirname(docx_path), filename_base + ".docx")
+    os.rename(docx_path, docx_final)
+    docx_path = docx_final
+
+    st.success("✅ Word letter generated successfully.")
     download_button(docx_path, "⬇️ Download Word Letter")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
-        st.success("PDF letter generated successfully.")
+        pdf_final = os.path.join(os.path.dirname(pdf_path), filename_base + ".pdf")
+        os.rename(pdf_path, pdf_final)
+        pdf_path = pdf_final
+
+        st.success("✅ PDF letter generated successfully.")
         download_button(pdf_path, "⬇️ Download PDF Letter")
     else:
-        st.warning("PDF conversion not supported on this platform.")
+        st.warning("⚠️ PDF conversion not supported on this platform.")
