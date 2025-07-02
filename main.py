@@ -54,16 +54,19 @@ df = data[selected_sheet]
 
 # Column Index Mapping
 col_pf = 1
+col_hrms = 2
 col_unit = 4
 col_english_name = 5
 col_hindi_name = 13
 col_designation = 14
 
-df["DisplayName"] = df.apply(lambda row: f"{row[col_unit]} - {row[col_english_name]}", axis=1)
+# Display Format: PF - HRMS - UNIT - English Name
+df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row[col_unit]} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
-selected_display = st.selectbox("Select Employee (Unit - English Name):", display_list)
+selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
 
+english_name = selected_row[col_english_name]
 hindi_name = selected_row[col_hindi_name]
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
@@ -102,7 +105,7 @@ template_files = {
 }
 
 if st.button("Generate Letter"):
-    base_filename = f"{letter_type.split()[0]}_{hindi_name}_{letter_date.strftime('%d-%m-%Y')}"
+    base_filename = f"{letter_type.split()[0]}_{english_name}_{letter_date.strftime('%d-%m-%Y')}"
     docx_path = generate_docx(template_files[letter_type], context, base_filename)
     st.success("Word letter generated successfully.")
     download_button(docx_path, f"â¬‡ï¸ Download {os.path.basename(docx_path)}")
