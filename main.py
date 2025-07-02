@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
@@ -46,15 +47,14 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-def correct_unit_station_format(unit_val, station_val):
+def format_unit(unit_val):
     try:
         unit_str = str(unit_val).strip()
         if "/" in unit_str:
             unit_str = unit_str.split("/")[0].strip()
         if unit_str.isdigit():
-            unit_str = unit_str[:2]
-        station_str = str(station_val).strip()
-        return f"{unit_str}/{station_str}"
+            return unit_str[:2]
+        return unit_str
     except:
         return ""
 
@@ -70,16 +70,15 @@ col_english_name = 5
 col_hindi_name = 13
 col_designation = 18
 
-df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[9]), axis=1)
-df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
-
+df["FormattedUnit"] = df.iloc[:, col_unit].apply(format_unit)
+df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['FormattedUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
 
 english_name = selected_row[col_english_name]
 hindi_name = selected_row[col_hindi_name]
-
+formatted_unit = format_unit(selected_row[col_unit])
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -122,11 +121,11 @@ if st.button("Generate Letter"):
     base_filename = f"{letter_type.split()[0]}_{english_name}_{letter_date.strftime('%d-%m-%Y')}"
     docx_path = generate_docx(template_files[letter_type], context, base_filename)
     st.success("Word letter generated successfully.")
-    download_button(docx_path, f"⬇️ Download {os.path.basename(docx_path)}")
+    download_button(docx_path, f"â¬‡ï¸ Download {os.path.basename(docx_path)}")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
         st.success("PDF letter generated successfully.")
-        download_button(pdf_path, f"⬇️ Download {os.path.basename(pdf_path)}")
+        download_button(pdf_path, f"â¬‡ï¸ Download {os.path.basename(pdf_path)}")
     else:
         st.warning("PDF conversion not supported on this platform.")
