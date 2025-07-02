@@ -6,7 +6,6 @@ from tempfile import NamedTemporaryFile
 import base64
 import os
 
-# Load Employee Data
 @st.cache_data
 def load_employee_data():
     df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
@@ -52,15 +51,21 @@ sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Final Column Mapping
+# Column Index Mapping
 col_pf = 1
 col_unit = 4
-col_empname = 13
-col_designation = 18  # Employee Name के बाद वाला कॉलम
+col_english_name = 5
+col_hindi_name = 13
+col_designation = 14
 
-employee_names = df.iloc[:, col_empname].dropna().tolist()
-selected_emp = st.selectbox("Select Employee:", employee_names)
-selected_row = df[df.iloc[:, col_empname] == selected_emp].iloc[0]
+# Prepare dropdown list with English Name + Unit
+df["DisplayName"] = df.apply(lambda row: f"{row[col_unit]} - {row[col_english_name]}", axis=1)
+display_list = df["DisplayName"].dropna().tolist()
+selected_display = st.selectbox("Select Employee (Unit - English Name):", display_list)
+selected_row = df[df["DisplayName"] == selected_display].iloc[0]
+
+# Use Hindi name from column 14
+hindi_name = selected_row[col_hindi_name]
 
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
@@ -80,7 +85,7 @@ noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type
 
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
-    "EmployeeName": selected_emp,
+    "EmployeeName": hindi_name,
     "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
     "UnitNumber": selected_row[col_unit] if len(selected_row) > col_unit else "",
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
