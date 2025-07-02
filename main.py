@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 from docx import Document
-from tempfile import NamedTemporaryFile
 import base64
 import os
 
@@ -15,7 +14,7 @@ col_eng_name = 5
 col_hindi_name = 13
 col_designation = 18
 
-# === Format Unit/Station
+# === Unit formatting helper ===
 def format_unit(unit_val, station_val):
     try:
         unit_str = str(unit_val)
@@ -26,7 +25,7 @@ def format_unit(unit_val, station_val):
     except:
         return ""
 
-# === Load Excel Data
+# === Load employee data ===
 @st.cache_data
 def load_employee_data():
     df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
@@ -37,12 +36,11 @@ sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# === Dropdown: PF, HRMS, Unit, Name (English)
+# === Create dropdown with full string ===
 df["Dropdown"] = df.apply(
-    lambda row: f"PF:{row[col_pf]}, HRMS:{row[col_hrms]}, Unit:{format_unit(row[col_unit], row[col_station])}, {row[col_eng_name]}",
+    lambda row: f"{row[col_eng_name]} (PF:{row[col_pf]}, HRMS:{row[col_hrms]}, Unit:{format_unit(row[col_unit], row[col_station])})",
     axis=1
 )
-
 dropdown_list = ["-- Select Employee --"] + df["Dropdown"].tolist()
 selected_dropdown = st.selectbox("Select Employee (with details):", dropdown_list)
 
@@ -52,7 +50,7 @@ if selected_dropdown == "-- Select Employee --":
 
 selected_row = df[df["Dropdown"] == selected_dropdown].iloc[0]
 
-# === Letter Options
+# === Letter details ===
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -70,7 +68,7 @@ memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
-# === Context for placeholders
+# === Context for placeholder replacement ===
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": selected_row[col_hindi_name],
@@ -85,7 +83,7 @@ context = {
     "NOCCount": noc_count
 }
 
-# === Templates
+# === Templates ===
 template_files = {
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -93,7 +91,7 @@ template_files = {
     "Exam NOC": "assets/Exam NOC Letter temp.docx"
 }
 
-# === Replace placeholders
+# === Replace placeholders ===
 def replace_placeholders(doc, context):
     for p in doc.paragraphs:
         for key, val in context.items():
@@ -106,15 +104,14 @@ def replace_placeholders(doc, context):
                     if f"[{key}]" in cell.text:
                         cell.text = cell.text.replace(f"[{key}]", str(val))
 
-# === Generate DOCX
+# === Generate DOCX ===
 def generate_docx(template_path, context, filename):
     doc = Document(template_path)
     replace_placeholders(doc, context)
-    temp_file = NamedTemporaryFile(delete=False, suffix=".docx", prefix=filename + "_")
-    doc.save(temp_file.name)
-    return temp_file.name
+    doc.save(filename)
+    return filename
 
-# === Convert to PDF
+# === Convert PDF (optional) ===
 def convert_to_pdf(docx_path):
     try:
         from docx2pdf import convert
@@ -124,7 +121,7 @@ def convert_to_pdf(docx_path):
     except:
         return None
 
-# === Download link
+# === Download link ===
 def download_button(file_path, label):
     with open(file_path, "rb") as f:
         data = f.read()
@@ -132,31 +129,20 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# === Auto file name
-def get_file_name(selected_row, letter_type, letter_date):
-    eng_name = str(selected_row[col_eng_name]).strip().replace(" ", "_")
-    date_str = letter_date.strftime("%Y%m%d")
-    return f"{eng_name}_{letter_type.replace(' ', '_')}_{date_str}"
-
-# === Generate Letter
+# === Generate Button ===
 if st.button("Generate Letter"):
-    base_file_name = get_file_name(selected_row, letter_type, letter_date)
-    output_dir = "generated_files"
-    os.makedirs(output_dir, exist_ok=True)
+    emp_name = selected_row[col_hindi_name]
+    today_str = letter_date.strftime("%d-%m-%Y")
+    file_base = f"{letter_type} - {emp_name} - {today_str}".replace(":", "-").replace("/", "-")
+    docx_path = f"{file_base}.docx"
 
-    final_docx_path = os.path.join(output_dir, base_file_name + ".docx")
-    final_pdf_path = os.path.join(output_dir, base_file_name + ".pdf")
+    docx_path = generate_docx(template_files[letter_type], context, docx_path)
+    st.success("✅ Word letter generated successfully.")
+    download_button(docx_path, "⬇️ Download Word Letter")
 
-    temp_docx = generate_docx(template_files[letter_type], context, base_file_name)
-    os.rename(temp_docx, final_docx_path)
-
-    st.success(f"Word letter generated: {os.path.basename(final_docx_path)}")
-    download_button(final_docx_path, "⬇️ Download Word Letter")
-
-    pdf_temp = convert_to_pdf(final_docx_path)
-    if pdf_temp and os.path.exists(pdf_temp):
-        os.rename(pdf_temp, final_pdf_path)
-        st.success(f"PDF letter generated: {os.path.basename(final_pdf_path)}")
-        download_button(final_pdf_path, "⬇️ Download PDF Letter")
+    pdf_path = convert_to_pdf(docx_path)
+    if pdf_path and os.path.exists(pdf_path):
+        st.success("✅ PDF letter generated successfully.")
+        download_button(pdf_path, "⬇️ Download PDF Letter")
     else:
-        st.warning("PDF conversion not supported on this platform.")
+        st.warning("⚠️ PDF conversion not supported on this platform.")
