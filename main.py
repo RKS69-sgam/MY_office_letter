@@ -56,7 +56,7 @@ df = data[selected_sheet]
 col_pf = 1
 col_unit = 4
 col_empname = 13
-col_designation = 16  # Employee Name के बाद वाला कॉलम
+col_designation = 18  # Employee Name के बाद वाला कॉलम
 
 employee_names = df.iloc[:, col_empname].dropna().tolist()
 selected_emp = st.selectbox("Select Employee:", employee_names)
