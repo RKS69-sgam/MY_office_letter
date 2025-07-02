@@ -6,10 +6,17 @@ from tempfile import NamedTemporaryFile
 import base64
 import os
 
+# Load Employee Data
 @st.cache_data
 def load_employee_data():
-    df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
+    df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsm", sheet_name=None)
     return df
+
+def format_unit(unit_val, station_val):
+    unit_str = str(unit_val).strip().split("/")[0]
+    if any(c.isalpha() for c in unit_str):
+        return unit_str + "/" + str(station_val).strip()
+    return unit_str[:2] + "/" + str(station_val).strip()
 
 def replace_placeholders(doc, context):
     for p in doc.paragraphs:
@@ -46,68 +53,53 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-# ========== Column Mappings ==========
+# Column Indexes (0-based)
 col_pf = 1
 col_hrms = 2
 col_unit = 4
 col_eng_name = 5
-col_station = 8
-col_hin_name = 13
+col_hindi_name = 13
 col_designation = 18
+col_station = 8
 
-# ========== Load Data ==========
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
 df = data[selected_sheet]
 
-# Format Unit + Station
-def format_unit(unit_raw, station):
-    try:
-        unit_str = str(unit_raw).strip()
-        if "/" in unit_str:
-            unit_str = unit_str.split("/")[0]
-        if unit_str.isdigit():
-            unit_str = unit_str[:2]
-        return f"{unit_str}/{station}"
-    except:
-        return ""
-
-# Build dropdown list
+# Build Dropdown Format
 df["Dropdown"] = df.apply(
-    lambda row: f"PF: {row[col_pf]} | HRMS: {row[col_hrms]} | Unit: {row[col_unit]} | Name: {row[col_eng_name]}", axis=1
+    lambda row: f"(PF:{row[col_pf]}, HRMS:{row[col_hrms]}, Unit:{format_unit(row[col_unit], row[col_station])}) {row[col_eng_name]}",
+    axis=1
 )
 
-dropdown_list = df["Dropdown"].dropna().tolist()
-selected_display = st.selectbox("Select Employee:", dropdown_list)
-selected_row = df[df["Dropdown"] == selected_display].iloc[0]
+selected_dropdown = st.selectbox("Select Employee (with details):", df["Dropdown"].tolist())
+selected_row = df[df["Dropdown"] == selected_dropdown].iloc[0]
 
-# Get formatted values
-formatted_unit = format_unit(selected_row[col_unit], selected_row[col_station])
-
-# UI inputs
+# Letter Options
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
     "Sick Memo",
     "Exam NOC"
 ])
+
 letter_date = st.date_input("Select Letter Date", date.today())
 
+# Inputs for different letter types
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
-default_join = to_date + timedelta(days=1) if to_date else date.today()
-duty_date = st.date_input("Join Duty Date", default_join) if "Duty" in letter_type else None
-
+duty_date = st.date_input("Join Duty Date", to_date + timedelta(days=1)) if "Duty" in letter_type else None
 memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
 exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
 noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
 
+# Fill Placeholder Context
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
-    "EmployeeName": selected_row[col_hin_name],
+    "EmployeeName": selected_row[col_hindi_name],
     "Designation": selected_row[col_designation],
-    "UnitNumber": formatted_unit,
+    "UnitNumber": format_unit(selected_row[col_unit], selected_row[col_station]),
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
     "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
     "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
@@ -117,6 +109,7 @@ context = {
     "NOCCount": noc_count
 }
 
+# Templates
 template_files = {
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -126,22 +119,13 @@ template_files = {
 
 if st.button("Generate Letter"):
     docx_path = generate_docx(template_files[letter_type], context)
-
-    filename_base = f"{letter_type} - {selected_row[col_eng_name]} - {letter_date.strftime('%d-%m-%Y')}"
-    docx_final = os.path.join(os.path.dirname(docx_path), filename_base + ".docx")
-    os.rename(docx_path, docx_final)
-    docx_path = docx_final
-
-    st.success("✅ Word letter generated successfully.")
-    download_button(docx_path, "⬇️ Download Word Letter")
+    file_name_base = f"{letter_type.replace(' ', '_')} - {selected_row[col_eng_name]}"
+    st.success("Word letter generated successfully.")
+    download_button(docx_path, f"⬇️ Download Word Letter: {file_name_base}.docx")
 
     pdf_path = convert_to_pdf(docx_path)
     if pdf_path and os.path.exists(pdf_path):
-        pdf_final = os.path.join(os.path.dirname(pdf_path), filename_base + ".pdf")
-        os.rename(pdf_path, pdf_final)
-        pdf_path = pdf_final
-
-        st.success("✅ PDF letter generated successfully.")
-        download_button(pdf_path, "⬇️ Download PDF Letter")
+        st.success("PDF letter generated successfully.")
+        download_button(pdf_path, f"⬇️ Download PDF Letter: {file_name_base}.pdf")
     else:
-        st.warning("⚠️ PDF conversion not supported on this platform.")
+        st.warning("PDF conversion not supported on this platform.")
