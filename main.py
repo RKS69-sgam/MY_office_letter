@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
@@ -46,7 +47,7 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
-def format_unit(unit_val):
+def correct_unit_station_format(unit_val, station_val):
     try:
         unit_str = str(unit_val).strip()
         if "/" in unit_str:
@@ -69,9 +70,7 @@ col_english_name = 5
 col_hindi_name = 13
 col_designation = 18
 
-df["FormattedUnit"] = df.iloc[:, col_unit].apply(format_unit)
-df["Station"] = df.iloc[:, 7].astype(str).str.strip()
-df["DisplayUnit"] = df["FormattedUnit"] + "/" + df["Station"]
+df["DisplayUnit"] = df.apply(lambda row: correct_unit_station_format(row[col_unit], row[7]), axis=1)
 df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['DisplayUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 selected_display = st.selectbox("Select Employee:", display_list)
