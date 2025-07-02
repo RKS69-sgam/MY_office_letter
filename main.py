@@ -47,6 +47,16 @@ def download_button(file_path, label):
         href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
         st.markdown(href, unsafe_allow_html=True)
 
+def format_unit(unit_val):
+    try:
+        unit_str = str(unit_val).strip()
+        if unit_str.isdigit():
+            return unit_str[:2]
+        else:
+            return unit_str
+    except:
+        return ""
+
 data = load_employee_data()
 sheet_names = list(data.keys())
 selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
@@ -60,14 +70,16 @@ col_english_name = 5
 col_hindi_name = 13
 col_designation = 18  # Column 19
 
-# Display Format: PF - HRMS - UNIT - English Name
-df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row[col_unit]} - {row[col_english_name]}", axis=1)
+# Display Format: PF - HRMS - formatted UNIT - English Name
+df["FormattedUnit"] = df.iloc[:, col_unit].apply(format_unit)
+df["DisplayName"] = df.apply(lambda row: f"{row[col_pf]} - {row[col_hrms]} - {row['FormattedUnit']} - {row[col_english_name]}", axis=1)
 display_list = df["DisplayName"].dropna().tolist()
 selected_display = st.selectbox("Select Employee:", display_list)
 selected_row = df[df["DisplayName"] == selected_display].iloc[0]
 
 english_name = selected_row[col_english_name]
 hindi_name = selected_row[col_hindi_name]
+formatted_unit = format_unit(selected_row[col_unit])
 letter_type = st.selectbox("Select Letter Type:", [
     "SF-11 Punishment Order",
     "Duty Letter (For Absent)",
@@ -79,7 +91,6 @@ letter_date = st.date_input("Select Letter Date", date.today())
 from_date = st.date_input("From Date") if "Duty" in letter_type else None
 to_date = st.date_input("To Date") if "Duty" in letter_type else None
 
-# Auto-fill Join Duty Date = To Date + 1 day if "Duty Letter"
 duty_date_default = (to_date + timedelta(days=1)) if to_date else date.today()
 duty_date = st.date_input("Join Duty Date", duty_date_default) if "Duty" in letter_type else None
 
@@ -91,7 +102,7 @@ context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": hindi_name,
     "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
-    "UnitNumber": selected_row[col_unit] if len(selected_row) > col_unit else "",
+    "UnitNumber": formatted_unit,
     "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
     "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
     "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
