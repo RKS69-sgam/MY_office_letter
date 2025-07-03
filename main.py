@@ -83,66 +83,47 @@ exam_noc_data = load_exam_noc_data()
 # You can now add logic here using these fresh data
 # SF-11 Punishment Order Section
 if selected_letter_type == "SF-11 Punishment Order":
+    st.subheader("📄 SF-11 Punishment Order Letter")
+
+    # Dropdown to select employee from SF-11 Register
     sf11_register["Display"] = sf11_register.apply(
         lambda row: f"{row['पी.एफ. क्रमांक']} - {row['कर्मचारी का नाम']} - {row['दिनांक']} - {row['पत्र क्र.']}",
         axis=1
     )
+    sf11_display_list = sf11_register["Display"].tolist()
+    selected_display = st.selectbox("👤 Select Employee (SF-11 Register):", sf11_display_list)
 
-    # Dropdown to select employee
-    sf11_employee_list = sf11_register["Display"].dropna().tolist()
-    selected_sf11_display = st.selectbox("2️⃣ Select Employee (SF-11 Register):", sf11_employee_list)
+    # Extract selected row
+    selected_row = sf11_register[sf11_register["Display"] == selected_display].iloc[0]
 
-    # Fetch selected row
-    selected_sf11_row = sf11_register[sf11_register["Display"] == selected_sf11_display].iloc[0]
+    # Extract values
+    pf_number = selected_row["पी.एफ. क्रमांक"]
+    hindi_name = selected_row["कर्मचारी का नाम"]
+    designation = selected_row["पदनाम"]
+    letter_no = selected_row["पत्र क्र."]
+    letter_date = st.date_input("📅 Letter Date", date.today())
+    memo = selected_row["आरोप का विवरण"]
 
-    # Extract master data for selected employee (PF No. match)
-    pf_number = selected_sf11_row["पी.एफ. क्रमांक"]
-    letter_no = selected_sf11_row["पत्र क्र."]
-    hindi_name = selected_sf11_row["कर्मचारी का नाम"]
+    # Generate D-1 format number
+    final_letter_no = f"11 / D-1"
 
-    # Find employee's designation from Master Data
-    found = False
-    for sheet in employee_master.values():
-        match_row = sheet[sheet.iloc[:, 1] == pf_number]
-        if not match_row.empty:
-            designation = match_row.iloc[0][18]  # Column 18 = Designation (Hindi)
-            short_name = match_row.iloc[0][14] if len(match_row.columns) > 14 else ""
-            found = True
-            break
+    # Generate context
+    context = {
+        "EmployeeName": f"{hindi_name} {designation}",
+        "LetterNo.": letter_no,
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "MEMO": memo
+    }
 
-    if not found:
-        st.error("❌ Employee designation not found in master data.")
-    else:
-        # दण्ड आदेश क्रमांक (D-1 fixed + पत्र क्र.)
-        order_no = f"D-1 / {letter_no}"
+    if st.button("📄 Generate SF-11 Punishment Order"):
+        doc_path = generate_doc(template_files["SF-11 Punishment Order"], context)
+        st.success("✅ Letter generated successfully!")
 
-        # Memo taken from SF-11 row or fixed
-        memo_text = selected_sf11_row["आरोप का विवरण"]
-        letter_date = st.date_input("📅 Letter Date", date.today())
+        download_file(doc_path)
 
-        # Fill context
-        context = {
-            "EmployeeName": f"{hindi_name}, {designation}",
-            "LetterNo.": letter_no,
-            "LetterDate": letter_date.strftime("%d-%m-%Y"),
-            "MEMO": memo_text
-        }
-
-        # Generate letter
-        if st.button("📄 Generate SF-11 Punishment Order"):
-            doc = Document(template_files["SF-11 Punishment Order"])
-            replace_placeholders(doc, context)
-
-            file_name = f"SF11_Punishment_{hindi_name}_{letter_date.strftime('%d-%m-%Y')}"
-            output_docx = os.path.join("/tmp", f"{file_name}.docx")
-            doc.save(output_docx)
-
-            st.success("✅ SF-11 Punishment Order Generated!")
-            download_button(output_docx, f"⬇️ Download {file_name}.docx")
-
-            pdf_path = convert_to_pdf(output_docx)
-            if pdf_path and os.path.exists(pdf_path):
-                st.success("📄 PDF also generated!")
-                download_button(pdf_path, f"⬇️ Download {os.path.basename(pdf_path)}")
-            else:
-                st.warning("⚠️ PDF conversion failed or not supported.")
+        pdf_path = convert_to_pdf(doc_path)
+        if pdf_path and os.path.exists(pdf_path):
+            st.success("📄 PDF also ready!")
+            download_file(pdf_path)
+        else:
+            st.warning("⚠️ PDF not generated.")
