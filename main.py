@@ -85,84 +85,56 @@ exam_noc_data = load_exam_noc_data()
 if selected_letter_type == "SF-11 Punishment Order":
     st.subheader("📄 SF-11 Punishment Order Letter")
 
-    sf11_register["Display"] = sf11_register.apply(
-        lambda row: f"{row['पी.एफ. क्रमांक']} - {row['कर्मचारी का नाम']} - {row['दिनांक']} - {row['पत्र क्र.']}", axis=1
-    )
-    sf11_employee_list = sf11_register["Display"].tolist()
-    selected_sf11_display = st.selectbox("👤 Select Employee (SF-11 Register):", sf11_employee_list)
+    selected_sf11_row = sf11_register[sf11_register["Display"] == selected_sf11_display].iloc[0]
 
-    if selected_sf11_display:
-        selected_row = sf11_register[sf11_register["Display"] == selected_sf11_display].iloc[0]
-        pf_number = selected_row["पी.एफ. क्रमांक"]
-        hindi_name = selected_row["कर्मचारी का नाम"]
-        letter_no = selected_row["पत्र क्र."]
-        designation = selected_row["पदनाम"] if "पदनाम" in selected_row else ""
+    # Extract master data for selected employee (PF No. match)
+    pf_number = selected_sf11_row["पी.एफ. क्रमांक"]
+    letter_no = selected_sf11_row["पत्र क्र."]
+    hindi_name = selected_sf11_row["कर्मचारी का नाम"]
 
+    # Find employee's designation from Master Data
+    found = False
+    for sheet in employee_master.values():
+        match_row = sheet[sheet.iloc[:, 1] == pf_number]
+        if not match_row.empty:
+            designation = match_row.iloc[0][18]  # Column 18 = Designation (Hindi)
+            short_name = match_row.iloc[0][14] if len(match_row.columns) > 14 else ""
+            found = True
+            break
+
+    if not found:
+        st.error("❌ Employee designation not found in master data.")
+    else:
+        # दण्ड आदेश क्रमांक (D-1 fixed + पत्र क्र.)
+        order_no = f"D-1 / {letter_no}"
+
+        # Memo taken from SF-11 row or fixed
+        memo_text = selected_sf11_row["आरोप का विवरण"]
         letter_date = st.date_input("📅 Letter Date", date.today())
 
-        reply_status = st.selectbox("📨 प्रति उत्तर प्राप्त हुआ?", ["हाँ", "नहीं"])
-        punishment_number = f"D-1/{letter_no}"
+        # Fill context
+        context = {
+            "EmployeeName": f"{hindi_name}, {designation}",
+            "LetterNo.": letter_no,
+            "LetterDate": letter_date.strftime("%d-%m-%Y"),
+            "MEMO": memo_text
+        }
 
-        st.markdown(f"### 🔢 दण्डादेश क्रमांक: `{punishment_number}`")
+        # Generate letter
+        if st.button("📄 Generate SF-11 Punishment Order"):
+            doc = Document(template_files["SF-11 Punishment Order"])
+            replace_placeholders(doc, context)
 
-        punishment_options = [
-            "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
-            "आगामी देय एक वर्ष की वेतन वृद्धि संचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
-            "आगामी देय एक सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय एक सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
-        ]
-        selected_punishment = st.selectbox("⚖️ दण्ड का विवरण:", punishment_options)
+            file_name = f"SF11_Punishment_{hindi_name}_{letter_date.strftime('%d-%m-%Y')}"
+            output_docx = os.path.join("/tmp", f"{file_name}.docx")
+            doc.save(output_docx)
 
-        appeal_date = st.date_input("📅 अपील दिनांक (यदि हो)", value=None)
-        appeal_detail = st.text_area("📝 अपील निर्णय पत्र क्र. एवं विवरण", "")
-        remark = st.text_area("📌 रिमार्क", "")
+            st.success("✅ SF-11 Punishment Order Generated!")
+            download_button(output_docx, f"⬇️ Download {file_name}.docx")
 
-        if st.button("📄 Generate Punishment Order"):
-            context = {
-                "LetterDate": letter_date.strftime("%d-%m-%Y"),
-                "Name": hindi_name,
-                "Designation": designation,
-                "LetterNo": letter_no,
-                "PunishmentOrderNo": punishment_number,
-                "PunishmentDetail": selected_punishment,
-                "AppealDate": appeal_date.strftime("%d-%m-%Y") if appeal_date else "",
-                "AppealDetail": appeal_detail,
-                "Remark": remark,
-            }
-
-            output_path = generate_doc(template_files["SF-11 Punishment Order"], context)
-            st.success("✅ Punishment Order Generated Successfully!")
-            download_button(output_path, f"Download_Punishment_Order_{hindi_name}.docx")
-
-            pdf_path = convert_to_pdf(output_path)
+            pdf_path = convert_to_pdf(output_docx)
             if pdf_path and os.path.exists(pdf_path):
                 st.success("📄 PDF also generated!")
-                download_button(pdf_path, f"Download_Punishment_Order_{hindi_name}.pdf")
+                download_button(pdf_path, f"⬇️ Download {os.path.basename(pdf_path)}")
             else:
                 st.warning("⚠️ PDF conversion failed or not supported.")
-
-            # Save entry to SF-11 Register
-            try:
-                sf11_df = pd.read_excel("assets/SF-11 Register.xlsx", sheet_name="SSE-SGAM")
-                new_entry = {
-                    "स.क्र.": len(sf11_df) + 1,
-                    "पी.एफ. क्रमांक": pf_number,
-                    "कर्मचारी का नाम": hindi_name,
-                    "पदनाम": designation,
-                    "पत्र क्र.": letter_no,
-                    "दिनांक": letter_date.strftime("%d-%m-%Y"),
-                    "आरोप का विवरण": selected_punishment,
-                    "दण्डादेश क्रमांक": punishment_number,
-                    "दण्डादेश जारी करने का दिनांक": letter_date.strftime("%d-%m-%Y"),
-                    "यदि कर्मचारी द्वारा अपील किया गया हो तो अपील का दिनांक": appeal_date.strftime("%d-%m-%Y") if appeal_date else "",
-                    "अपील निर्णय पत्र क्र. एवं संक्षिप्त विवरण": appeal_detail,
-                    "रिमार्क": remark,
-                    "प्रत्युत्तर प्राप्‍त हुआ": reply_status
-                }
-                updated_df = pd.concat([sf11_df, pd.DataFrame([new_entry])], ignore_index=True)
-                updated_df.to_excel("assets/SF-11 Register.xlsx", sheet_name="SSE-SGAM", index=False)
-                st.success("🗂 Entry Saved to SF-11 Register.")
-            except Exception as e:
-                st.error(f"❌ Error saving to register: {e}")
