@@ -83,6 +83,10 @@ exam_noc_data = load_exam_noc_data()
 # You can now add logic here using these fresh data
 # SF-11 Punishment Order Section
 if selected_letter_type == "SF-11 Punishment Order":
+# Add Display column to sf11_register if not already added
+sf11_register["Display"] = sf11_register.apply(
+    lambda row: f"{row['पी.एफ. क्रमांक']} - {row['कर्मचारी का नाम']} - {row['दिनांक']} - {row['पत्र क्र.']}",
+    axis=1
     st.subheader("📄 SF-11 Punishment Order Letter")
 
     selected_sf11_row = sf11_register[sf11_register["Display"] == selected_sf11_display].iloc[0]
