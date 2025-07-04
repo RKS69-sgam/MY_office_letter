@@ -5,6 +5,12 @@ from docx import Document
 import os
 import base64
 
+template_files = {
+    "SF-11 For Other Reason": "templates/SF11_OtherReason.docx",
+    "Duty Letter (For Absent)": "templates/Duty_Letter_Absent.docx"
+}
+
+
 # === Configurations ===
 template_path = "assets/Absent Duty letter temp.docx"
 output_folder = "generated"
