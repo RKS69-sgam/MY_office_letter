@@ -92,24 +92,24 @@ if selected_letter_type == "Duty Letter (For Absent)":
         st.markdown(href, unsafe_allow_html=True)
 
     if st.button("📄 Generate Duty Letter"):
-  if duty_mode == "SF-11 & Duty Letter For Absent":
-    # 1. SF-11 Generate
-    sf11_template = template_files["SF-11 For Other Reason"]
-    sf11_filename = f"SF-11 - {hindi_name}.docx"
-    sf11_path = generate_doc(sf11_template, context)
-    st.success("✅ SF-11 Letter generated successfully!")
-    download_file(sf11_path)
+    if duty_mode == "SF-11 & Duty Letter For Absent":
+        # 1. SF-11 Generate
+        sf11_template = template_files["SF-11 For Other Reason"]
+        sf11_filename = f"SF-11 - {hindi_name}.docx"
+        sf11_path = generate_doc(sf11_template, context)
+        st.success("✅ SF-11 Letter generated successfully!")
+        download_file(sf11_path)
 
-    # 2. Duty Letter Generate
-    duty_template = template_files["Duty Letter (For Absent)"]
-    duty_filename = f"Duty Letter - {hindi_name}.docx"
-    duty_path = generate_doc(duty_template, context)
-    st.success("✅ Duty Letter generated successfully!")
-    download_file(duty_path)
+        # 2. Duty Letter Generate
+        duty_template = template_files["Duty Letter (For Absent)"]
+        duty_filename = f"Duty Letter - {hindi_name}.docx"
+        duty_path = generate_doc(duty_template, context)
+        st.success("✅ Duty Letter generated successfully!")
+        download_file(duty_path)
 
-elif duty_mode == "Duty Letter For Absent":
-    duty_template = template_files["Duty Letter (For Absent)"]
-    duty_filename = f"Duty Letter - {hindi_name}.docx"
-    duty_path = generate_doc(duty_template, context)
-    st.success("✅ Duty Letter generated successfully!")
-    download_file(duty_path)
+    elif duty_mode == "Duty Letter For Absent":
+        duty_template = template_files["Duty Letter (For Absent)"]
+        duty_filename = f"Duty Letter - {hindi_name}.docx"
+        duty_path = generate_doc(duty_template, context)
+        st.success("✅ Duty Letter generated successfully!")
+        download_file(duty_path)
