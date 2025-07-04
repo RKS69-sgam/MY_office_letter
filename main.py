@@ -55,61 +55,64 @@ if selected_letter_type == "Duty Letter (For Absent)":
     memo = f"""आप बिना किसी पूर्व सूचना के दिनांक {from_date.strftime('%d-%m-%Y')} से {to_date.strftime('%d-%m-%Y')} तक कुल {days_absent} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"""
 
     # === Placeholder Replacement Context ===
-    context = {
-        "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "EmployeeName": hindi_name,
-        "Designation": designation,
-        "FromDate": from_date.strftime("%d-%m-%Y"),
-        "ToDate": to_date.strftime("%d-%m-%Y"),
-        "JoinDate": join_date.strftime("%d-%m-%Y"),
-        "PFNumber": pf_number,
-        "LetterNo": letter_no,
-        "Memo": memo,
-"UnitNumber": unit  # <-- नया key
-    }
+context = {
+    "LetterDate": letter_date.strftime("%d-%m-%Y"),
+    "EmployeeName": hindi_name,
+    "Designation": designation,
+    "FromDate": from_date.strftime("%d-%m-%Y"),
+    "ToDate": to_date.strftime("%d-%m-%Y"),
+    "JoinDate": join_date.strftime("%d-%m-%Y"),
+    "PFNumber": pf_number,
+    "LetterNo": letter_no,
+    "Memo": memo,
+    "UnitNumber": unit  # नया key
+}
 
-    def generate_word(template_path, context, filename):
-        doc = Document(template_path)
-        for p in doc.paragraphs:
-            for key, val in context.items():
-                if f"[{key}]" in p.text:
-                    p.text = p.text.replace(f"[{key}]", str(val))
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for key, val in context.items():
-                        if f"[{key}]" in cell.text:
-                            cell.text = cell.text.replace(f"[{key}]", str(val))
-        save_path = os.path.join(output_folder, filename)
-        doc.save(save_path)
-        return save_path
+# === Function to generate Word file and save to output folder ===
+def generate_word(template_path, context, filename):
+    doc = Document(template_path)
+    for p in doc.paragraphs:
+        for key, val in context.items():
+            if f"[{key}]" in p.text:
+                p.text = p.text.replace(f"[{key}]", str(val))
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, val in context.items():
+                    if f"[{key}]" in cell.text:
+                        cell.text = cell.text.replace(f"[{key}]", str(val))
+    save_path = os.path.join("generated_letters", filename)
+    doc.save(save_path)
+    return save_path
 
-    def download_word(path):
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        file_name = os.path.basename(path)
-        href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download Word File</a>'
-        st.markdown(href, unsafe_allow_html=True)
+# === Download link ===
+def download_word(path):
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    file_name = os.path.basename(path)
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download Word File</a>'
+    st.markdown(href, unsafe_allow_html=True)
 
-    if st.button("📄 Generate Duty Letter"):
+# === Final Generation Block ===
+if st.button("📄 Generate Duty Letter"):
     if duty_mode == "SF-11 & Duty Letter For Absent":
         # 1. SF-11 Generate
         sf11_template = template_files["SF-11 For Other Reason"]
         sf11_filename = f"SF-11 - {hindi_name}.docx"
-        sf11_path = generate_doc(sf11_template, context)
+        sf11_path = generate_word(sf11_template, context, sf11_filename)
         st.success("✅ SF-11 Letter generated successfully!")
-        download_file(sf11_path)
+        download_word(sf11_path)
 
         # 2. Duty Letter Generate
         duty_template = template_files["Duty Letter (For Absent)"]
         duty_filename = f"Duty Letter - {hindi_name}.docx"
-        duty_path = generate_doc(duty_template, context)
+        duty_path = generate_word(duty_template, context, duty_filename)
         st.success("✅ Duty Letter generated successfully!")
-        download_file(duty_path)
+        download_word(duty_path)
 
     elif duty_mode == "Duty Letter For Absent":
         duty_template = template_files["Duty Letter (For Absent)"]
         duty_filename = f"Duty Letter - {hindi_name}.docx"
-        duty_path = generate_doc(duty_template, context)
+        duty_path = generate_word(duty_template, context, duty_filename)
         st.success("✅ Duty Letter generated successfully!")
-        download_file(duty_path)
+        download_word(duty_path)
