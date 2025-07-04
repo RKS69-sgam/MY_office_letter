@@ -5,7 +5,7 @@ from docx import Document
 from tempfile import NamedTemporaryFile
 import base64
 import os
-from docx2pdf import convert
+#from docx2pdf import convert
 
 # Template Mapping
 template_files = {
