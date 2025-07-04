@@ -1,142 +1,193 @@
+# === Streamlit Letter Generator App ===
+
 import streamlit as st
 import pandas as pd
 import os
 import base64
 from docx import Document
 from datetime import datetime, date, timedelta
-from docx.text.paragraph import Paragraph
 
-# === Output Folder ===
+# === Directories ===
 output_folder = "generated_letters"
 os.makedirs(output_folder, exist_ok=True)
 
-# === Templates Map ===
+# === Templates ===
 template_files = {
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
     "SF-11 For Other Reason": "assets/SF-11 temp.docx",
     "Sick Memo": "assets/SICK MEMO temp.docx",
+    "General Letter": "assets/General Letter temp.docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
-    "General Letter": "assets/General Letter temp.docx"
+    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
 }
 
-# === Replace Placeholders (including table runs) ===
-def replace_placeholder_runs(doc, context):
-    def process_paragraph(paragraph: Paragraph):
-        full_text = ''.join(run.text for run in paragraph.runs)
-        for key, val in context.items():
-            if f"[{key}]" in full_text:
-                full_text = full_text.replace(f"[{key}]", str(val))
-                for run in paragraph.runs:
-                    run.text = ''
-                if paragraph.runs:
-                    paragraph.runs[0].text = full_text
+# === Registers ===
+sf11_register_path = "assets/SF-11 Register.xlsx"
+exam_noc_path = "assets/ExamNOC_Report.xlsx"
 
-    for para in doc.paragraphs:
-        process_paragraph(para)
-
+# === Helper Function: Placeholder Replace ===
+def generate_doc(template_path, context, filename):
+    doc = Document(template_path)
+    for p in doc.paragraphs:
+        for run in p.runs:
+            for key, val in context.items():
+                if f"[{key}]" in run.text:
+                    run.text = run.text.replace(f"[{key}]", str(val))
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for para in cell.paragraphs:
-                    process_paragraph(para)
-
-# === Generate Word ===
-def generate_word(template_path, context, filename):
-    doc = Document(template_path)
-    replace_placeholder_runs(doc, context)
+                    for run in para.runs:
+                        for key, val in context.items():
+                            if f"[{key}]" in run.text:
+                                run.text = run.text.replace(f"[{key}]", str(val))
     save_path = os.path.join(output_folder, filename)
     doc.save(save_path)
     return save_path
 
-# === Download Link ===
-def download_word(path):
+def download_link(path):
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
-    file_name = os.path.basename(path)
-    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download Word File</a>'
+    name = os.path.basename(path)
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">📥 Download: {name}</a>'
     st.markdown(href, unsafe_allow_html=True)
 
 # === UI ===
 st.title("📄 Railway Letter Generator")
-
-letter_type = st.selectbox("📌 Select Letter Type:", list(template_files.keys()) + ["SF-11 & Duty Letter For Absent"])
+letter_type = st.selectbox("📌 Select Letter Type", list(template_files.keys()))
 
 # === Employee Data ===
-employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
-sheet_names = list(employee_master.keys())
-selected_sheet = st.selectbox("📋 Select Sheet", sheet_names)
-df_emp = employee_master[selected_sheet]
-df_emp["Display"] = df_emp.apply(lambda row: f"{row[1]} - {row[2]} - {row[4]} - {row[5]}", axis=1)
-selected_display = st.selectbox("👤 Select Employee", df_emp["Display"].dropna().tolist())
-selected_row = df_emp[df_emp["Display"] == selected_display].iloc[0]
+emp_data = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
+sheet = st.selectbox("📋 Select Sheet", list(emp_data.keys()))
+df = emp_data[sheet]
+df["Display"] = df.apply(lambda row: f"{row[1]} - {row[2]} - {row[4]} - {row[5]}", axis=1)
+emp_display = st.selectbox("👤 Select Employee", df["Display"].dropna())
+emp_row = df[df["Display"] == emp_display].iloc[0]
 
-# === Extract Fields ===
-pf_number = selected_row[1]
-hrms_id = selected_row[2]
-unit = str(selected_row[4])
-working_station = selected_row[8]
-english_name = selected_row[5]
-hindi_name = selected_row[13]
-designation = selected_row[18]
-short_name = selected_row[14]
-unit_code = unit[:2] if len(unit) >= 2 else unit
-letter_no = f"{short_name}/{unit_code}/{working_station}"
-
-# === Date Fields Common ===
-letter_date = st.date_input("📄 Letter Date", value=date.today())
+# === Common Fields ===
+pf = emp_row[1]
+hrms = emp_row[2]
+unit_full = str(emp_row[4])
+unit = unit_full[:2] if len(unit_full) >= 2 else unit_full
+station = emp_row[8]
+ename_en = emp_row[5]
+ename_hi = emp_row[13]
+desig = emp_row[18]
+short = emp_row[14]
+letter_no = f"{short}/{unit}/{station}"
+today = date.today()
 
 # === Context Init ===
 context = {
-    "LetterDate": letter_date.strftime("%d-%m-%Y"),
-    "EmployeeName": hindi_name,
-    "Designation": designation,
-    "PFNumber": pf_number,
-    "UnitNumber": unit,
-    "ShortName": short_name,
-    "LetterNo": letter_no
+    "PFNumber": pf,
+    "UnitNumber": unit_full,
+    "Unit": unit,
+    "EmployeeName": ename_hi,
+    "Designation": desig,
+    "ShortName": short,
+    "LetterNo": letter_no,
 }
 
-# === Letter Specific Inputs ===
-if letter_type == "Duty Letter (For Absent)" or letter_type == "SF-11 & Duty Letter For Absent":
-    from_date = st.date_input("📅 From Date")
-    to_date = st.date_input("📅 To Date", value=date.today())
-    join_date = st.date_input("📆 Join Date", value=to_date + timedelta(days=1))
+# === Letter Type Specific Blocks ===
+if letter_type == "Duty Letter (For Absent)":
+    duty_mode = st.selectbox("Duty Mode", ["SF-11 & Duty Letter For Absent", "Duty Letter For Absent"])
+    from_date = st.date_input("From Date")
+    to_date = st.date_input("To Date", value=today)
+    join_date = st.date_input("Join Date", value=to_date + timedelta(days=1))
+    letter_date = st.date_input("Letter Date", value=today)
 
-    context["FromDate"] = from_date.strftime("%d-%m-%Y")
-    context["ToDate"] = to_date.strftime("%d-%m-%Y")
-    context["JoinDate"] = join_date.strftime("%d-%m-%Y")
-    context["DutyDate"] = join_date.strftime("%d-%m-%Y")
+    days = (to_date - from_date).days + 1
+    memo = f"आप बिना किसी पूर्व सूचना के दिनांक {from_date.strftime('%d-%m-%Y')} से {to_date.strftime('%d-%m-%Y')} तक कुल {days} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
 
-    days_absent = (to_date - from_date).days + 1
-    memo = f"आप बिना किसी पूर्व सूचना के दिनांक {from_date.strftime('%d-%m-%Y')} से {to_date.strftime('%d-%m-%Y')} तक कुल {days_absent} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
-    context["Memo"] = memo
+    context.update({
+        "FromDate": from_date.strftime("%d-%m-%Y"),
+        "ToDate": to_date.strftime("%d-%m-%Y"),
+        "JoinDate": join_date.strftime("%d-%m-%Y"),
+        "DutyDate": join_date.strftime("%d-%m-%Y"),
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "Memo": memo
+    })
 
 elif letter_type == "SF-11 For Other Reason":
-    memo = st.text_area("📌 Enter Memorandum")
-    context["Memo"] = memo + "\nजो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है।"
+    letter_date = st.date_input("Letter Date", value=today)
+    memo_user = st.text_area("📌 Memorandum Text")
+    memo = memo_user + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है।"
+    context.update({
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "Memo": memo
+    })
 
-elif letter_type == "Sick Memo" or letter_type == "General Letter":
-    memo = st.text_area("📌 Remarks / Memo")
-    context["Memo"] = memo
+elif letter_type == "Sick Memo":
+    letter_date = st.date_input("Letter Date", value=today)
+    context.update({"LetterDate": letter_date.strftime("%d-%m-%Y")})
+
+elif letter_type == "General Letter":
+    letter_date = st.date_input("Letter Date", value=today)
+    subject = st.text_input("Subject")
+    reference = st.text_input("Reference (Optional)")
+    memo = st.text_area("Memo")
+    copy_to = st.text_area("Copy To (Optional)")
+    context.update({
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "Subject": subject,
+        "Reference": reference if reference else "",
+        "Memo": memo,
+        "CopyTo": copy_to if copy_to else ""
+    })
 
 elif letter_type == "Exam NOC":
-    exam_name = st.text_input("📘 Exam Name")
-    context["Memo"] = f"Exam NOC requested for: {exam_name}"
+    year = st.selectbox("NOC Year", [str(y) for y in range(today.year - 1, today.year + 2)])
+    exam = st.text_input("Exam Name")
+    letter_date = st.date_input("Letter Date", value=today)
+
+    past = pd.read_excel(exam_noc_path)
+    emp_noc = past[(past["PFNumber"] == pf) & (past["Year"] == int(year))]
+    count = len(emp_noc)
+    if count >= 4:
+        st.error("❌ Already 4 NOCs issued this year!")
+        st.stop()
+    number = count + 1
+
+    context.update({
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "ExamName": exam,
+        "NOCNumber": str(number),
+        "NOCYear": year
+    })
+
+elif letter_type == "SF-11 Punishment Order":
+    letter_date = st.date_input("Letter Date", value=today)
+    memo = st.text_area("📌 Punishment Memo")
+    context.update({
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "Memo": memo
+    })
 
 # === Generate Button ===
 if st.button("📄 Generate Letter"):
-    if letter_type == "SF-11 & Duty Letter For Absent":
-        sf_template = template_files["SF-11 For Other Reason"]
-        duty_template = template_files["Duty Letter (For Absent)"]
-        sf_file = generate_word(sf_template, context, f"SF-11 - {hindi_name}.docx")
-        duty_file = generate_word(duty_template, context, f"Duty Letter - {hindi_name}.docx")
-        st.success("✅ SF-11 and Duty Letter generated!")
-        download_word(sf_file)
-        download_word(duty_file)
+    template = template_files[letter_type]
+    filename = f"{letter_type} - {ename_hi}.docx"
+    path = generate_doc(template, context, filename)
+    st.success(f"✅ {letter_type} generated successfully!")
+    download_link(path)
 
-    else:
-        template_path = template_files.get(letter_type)
-        filename = f"{letter_type} - {hindi_name}.docx"
-        path = generate_word(template_path, context, filename)
-        st.success("✅ Letter generated!")
-        download_word(path)
+    # SF-11 Register Entry
+    if letter_type == "SF-11 For Other Reason":
+        sf_data = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
+        new_entry = pd.DataFrame([[pf, ename_hi, desig, letter_no, context["LetterDate"], memo]], columns=sf_data.columns[:6])
+        sf_data = pd.concat([sf_data, new_entry], ignore_index=True)
+        with pd.ExcelWriter(sf11_register_path, mode="a", if_sheet_exists="replace") as writer:
+            sf_data.to_excel(writer, sheet_name="SSE-SGAM", index=False)
+
+    # Exam NOC Register Entry
+    if letter_type == "Exam NOC":
+        new_noc = pd.DataFrame([{
+            "PFNumber": pf,
+            "EmployeeName": ename_hi,
+            "Year": int(year),
+            "ExamName": exam,
+            "NOCNumber": number,
+            "Date": context["LetterDate"]
+        }])
+        full_noc = pd.concat([past, new_noc], ignore_index=True)
+        full_noc.to_excel(exam_noc_path, index=False)
