@@ -1,17 +1,76 @@
 import streamlit as st
 import pandas as pd
-from datetime import date, timedelta
-from docx import Document
 import os
 import base64
+from docx import Document
+from datetime import datetime
 
+# === Output Folder ===
+output_folder = "output"
+os.makedirs(output_folder, exist_ok=True)
+
+# === Define Template Files (located in 'assets/') ===
 template_files = {
-    "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
     "SF-11 For Other Reason": "assets/SF-11 temp.docx",
-    "Sick Memo": "assets/Sick Memo temp.docx",
-    "General Letter": "assets/General Letter temp.docx",
+    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
+    "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
+    "Sick Memo": "assets/SICK MEMO temp..docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
-    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
+    "General Letter": "assets/General Letter temp.docx"
+}
+
+# === Function to Generate Word File ===
+def generate_word(template_path, context, filename):
+    doc = Document(template_path)
+    for p in doc.paragraphs:
+        for key, val in context.items():
+            if f"[{key}]" in p.text:
+                p.text = p.text.replace(f"[{key}]", str(val))
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, val in context.items():
+                    if f"[{key}]" in cell.text:
+                        cell.text = cell.text.replace(f"[{key}]", str(val))
+    save_path = os.path.join(output_folder, filename)
+    doc.save(save_path)
+    return save_path
+
+# === Function to Download Word File ===
+def download_word(path):
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    file_name = os.path.basename(path)
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{file_name}">📥 Download Word File</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+# === Streamlit UI ===
+st.title("📄 Railway Letter Generator")
+
+letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
+
+hindi_name = st.text_input("Employee Hindi Name")
+designation = st.text_input("Designation")
+pf_number = st.text_input("PF Number")
+unit = st.text_input("Unit Number")
+memo = st.text_area("Memo / Remarks")
+letter_date = st.date_input("Letter Date", datetime.today())
+from_date = st.date_input("From Date")
+to_date = st.date_input("To Date")
+join_date = st.date_input("Join Date")
+
+# === Placeholder Mapping ===
+context = {
+    "LetterDate": letter_date.strftime("%d-%m-%Y"),
+    "EmployeeName": hindi_name,
+    "Designation": designation,
+    "FromDate": from_date.strftime("%d-%m-%Y"),
+    "ToDate": to_date.strftime("%d-%m-%Y"),
+    "JoinDate": join_date.strftime("%d-%m-%Y"),
+    "PFNumber": pf_number,
+    "UnitNumber": unit,
+    "Memo": memo,
+    "LetterNo": f"{unit}/{pf_number}"
 }
 
 
