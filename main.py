@@ -64,7 +64,7 @@ if selected_letter_type == "Duty Letter (For Absent)":
         "JoinDate": join_date.strftime("%d-%m-%Y"),
         "PFNumber": pf_number,
         "LetterNo": letter_no,
-        "Memo": memo
+        "Memo": memo,
 "UnitNumber": unit  # <-- नया key
     }
 
