@@ -5,9 +5,14 @@ from docx import Document
 import os
 import base64
 
+=== Define Template Files ===
 template_files = {
-    "SF-11 For Other Reason": "templates/SF11_OtherReason.docx",
-    "Duty Letter (For Absent)": "templates/Duty_Letter_Absent.docx"
+    "Duty Letter (For Absent)": "assets/Duty_Letter_Absent.docx",
+    "SF-11 For Other Reason": "assets/SF11_OtherReason.docx",
+    "Sick Memo": "assets/Sick_Memo.docx",
+    "General Letter": "assets/General_Letter.docx",
+    "Exam NOC": "assets/Exam_NOC.docx",
+    "SF-11 Punishment Order": "assets/SF11_Punishment.docx"
 }
 
 
