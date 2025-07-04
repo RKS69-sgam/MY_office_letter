@@ -19,23 +19,6 @@ template_files = {
     "General Letter": "assets/General Letter temp.docx"
 }
 
-# === Function to Generate Word File ===
-def generate_word(template_path, context, filename):
-    doc = Document(template_path)
-    for p in doc.paragraphs:
-        for key, val in context.items():
-            if f"[{key}]" in p.text:
-                p.text = p.text.replace(f"[{key}]", str(val))
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for key, val in context.items():
-                    if f"[{key}]" in cell.text:
-                        cell.text = cell.text.replace(f"[{key}]", str(val))
-    save_path = os.path.join(output_folder, filename)
-    doc.save(save_path)
-    return save_path
-
 # === Function to Download Word File ===
 def download_word(path):
     with open(path, "rb") as f:
