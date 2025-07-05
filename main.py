@@ -148,7 +148,7 @@ elif letter_type == "General Letter":
                                  "कनिष्ठ अभियंता (रेल पथ) भरसेड़ी",
                                  "कनिष्ठ अभियंता (रेल पथ) गजराबहरा",
                                  "कनिष्ठ अभियंता (रेल पथ) गोंदवाली",
-                                 "👤 Select Employee", df["Display"].dropna()"])
+                                 "df["Display"].dropna()"])
     context["OfficerUnit"] = officer
     context["Subject"] = subject
     context["Reference"] = reference
