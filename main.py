@@ -133,8 +133,7 @@ elif letter_type == "General Letter":
                                  "कनिष्ठ अभियंता (रेल पथ) निवास रोड",
                                  "कनिष्ठ अभियंता (रेल पथ) भरसेड़ी",
                                  "कनिष्ठ अभियंता (रेल पथ) गजराबहरा",
-                                 "कनिष्ठ अभियंता (रेल पथ) गोंदवाली",
-                                 "df["Display"].dropna()"])
+                                 "कनिष्ठ अभियंता (रेल पथ) गोंदवाली"])
     subject = st.text_input("Subject")
     reference = st.text_input("Reference")
     memo_input = st.text_area("Detailed Memo")
@@ -147,8 +146,7 @@ elif letter_type == "General Letter":
                                  "कनिष्ठ अभियंता (रेल पथ) निवास रोड",
                                  "कनिष्ठ अभियंता (रेल पथ) भरसेड़ी",
                                  "कनिष्ठ अभियंता (रेल पथ) गजराबहरा",
-                                 "कनिष्ठ अभियंता (रेल पथ) गोंदवाली",
-                                 "df["Display"].dropna()"])
+                                 "कनिष्ठ अभियंता (रेल पथ) गोंदवाली")
     context["OfficerUnit"] = officer
     context["Subject"] = subject
     context["Reference"] = reference
