@@ -124,7 +124,7 @@ elif letter_type == "Sick Memo":
     context["JoinDate"] = jd.strftime("%d-%m-%Y")
 
 elif letter_type == "General Letter":
-    officer = st.selectbox("TO",["सहायक मण्‍डल अभियंता प.म.रे. ब्‍योहारी","मण्‍डल अभियंता (पूर्व) प.म.रे. जबलपुर मण्‍डल","वरिष्‍ठ खण्‍ड अभियंता पी.वे.बरगवाँ"])
+    officer = st.selectbox("TO",["सहायक मण्‍डल अभियंता प.म.रे. ब्‍योहारी","मण्‍डल रेल प्रबंधक (कार्मिक) प.म.रे. जबलपुर मण्‍डल", "मण्‍डल अभियंता (पूर्व) प.म.रे. जबलपुर मण्‍डल","वरिष्‍ठ खण्‍ड अभियंता (रेल पथ) बरगवाँ"])
     subject = st.text_input("Subject")
     reference = st.text_input("Reference")
     memo_input = st.text_area("Detailed Memo")
