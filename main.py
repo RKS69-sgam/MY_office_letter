@@ -153,7 +153,7 @@ elif letter_type == "SF-11 Punishment Order":
                                                   "आगामी देय एक सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
                                                   "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
                                                   "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"])
-    context["Memo"] = f"आपके द्वारा की गई अनुशासनहीनता के लिए यह दंड प्रदान किया जाता है: {punishment}"
+    context["Memo"] = f"{punishment}"
 
 # === GENERATE LETTER ===
 if st.button("📄 Generate Letter"):
@@ -164,7 +164,7 @@ if st.button("📄 Generate Letter"):
     download_word(fpath)
 
     # SF-11 Register Entry
-    if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter For Absent"):
+    if letter_type in ["SF-11 For Other Reason"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter For Absent"):
         new_entry = pd.DataFrame([{
             "PFNumber": pf,
             "Name": hname,
@@ -176,6 +176,20 @@ if st.button("📄 Generate Letter"):
         updated = pd.concat([sf11_register, new_entry], ignore_index=True)
         updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
 
+
+ if letter_type in ["SF-11 Punishment Order"]:
+        new_entry = pd.DataFrame([{
+            "PFNumber": pf,
+            "Name": hname,
+            "Designation": desg,
+            "Letter No.": letter_no,
+            "Letter Date": letter_date.strftime("%d-%m-%Y"),
+            "Memo": context["Memo"]
+        }])
+        updated = pd.concat([sf11_register, new_entry], ignore_index=True)
+        updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+
+    
     # Exam NOC Register Entry
     if letter_type == "Exam NOC" and count < 4:
         new_noc = {
