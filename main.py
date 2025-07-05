@@ -60,7 +60,7 @@ def download_word(path):
     st.markdown(href, unsafe_allow_html=True)
 
 # === UI: Letter Type ===
-st.title("📄 Railway Letter Generator")
+st.title("📄 Letter Generator For OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("📌 Select Letter Type:", list(template_files.keys()))
 
 # === Employee Selection ===
@@ -91,7 +91,7 @@ context = {
     "PFNumber": pf,
     "ShortName": short,
     "Unit": unit,
-    "UnitNumber": unit_full,
+    "UnitNumber": unit,
     "LetterNo": letter_no,
     "DutyDate": "",
     "FromDate": "",
@@ -103,7 +103,7 @@ context = {
 # === Letter Type Logic ===
 if letter_type == "Duty Letter (For Absent)":
     st.subheader("🛠 Duty Letter")
-    mode = st.selectbox("Mode", ["SF-11 & Duty Letter For Absent", "Duty Letter For Absent"])
+    mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
     fd = st.date_input("From Date")
     td = st.date_input("To Date", value=date.today())
     jd = st.date_input("Join Date", value=td + timedelta(days=1))
@@ -121,11 +121,15 @@ elif letter_type == "SF-11 For Other Reason":
 
 elif letter_type == "Sick Memo":
     context["Memo"] = st.text_area("Memo")
-    jd = st.date_input("Join Date", value=date.today())
     context["JoinDate"] = jd.strftime("%d-%m-%Y")
 
 elif letter_type == "General Letter":
-    officer = st.text_input("Officer / Unit")
+    officer = st.selectbox("TO",["सहायक मण्‍डल अभियंता
+                              प.म.रे. ब्‍योहारी",
+                              "मण्‍डल अभियंता (पूर्व)
+                              प.म.रे. जबलपुर मण्‍डल",
+                              "वरिष्‍ठ खण्‍ड अभियंता पी.वे.
+                              बरगवाँ"])
     subject = st.text_input("Subject")
     reference = st.text_input("Reference")
     memo_input = st.text_area("Detailed Memo")
@@ -164,7 +168,7 @@ if st.button("📄 Generate Letter"):
     download_word(fpath)
 
     # SF-11 Register Entry
-    if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter For Absent"):
+    if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only"):
         new_entry = pd.DataFrame([{
             "PFNumber": pf,
             "Name": hname,
