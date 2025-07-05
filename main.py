@@ -134,7 +134,7 @@ elif letter_type == "General Letter":
                                  "कनिष्ठ अभियंता (रेल पथ) भरसेड़ी",
                                  "कनिष्ठ अभियंता (रेल पथ) गजराबहरा",
                                  "कनिष्ठ अभियंता (रेल पथ) गोंदवाली",
-                                 "👤 Select Employee", df["Display"]"])
+                                 "df["Display"].dropna()"])
     subject = st.text_input("Subject")
     reference = st.text_input("Reference")
     memo_input = st.text_area("Detailed Memo")
