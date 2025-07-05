@@ -108,6 +108,8 @@ if letter_type == "Duty Letter (For Absent)":
     td = st.date_input("To Date", value=date.today())
     jd = st.date_input("Join Date", value=td + timedelta(days=1))
     context["FromDate"] = fd.strftime("%d-%m-%Y")
+    context["EmployeeName"] = hname
+    context["Designation"] = desg
     context["ToDate"] = td.strftime("%d-%m-%Y")
     context["JoinDate"] = jd.strftime("%d-%m-%Y")
     context["DutyDate"] = jd.strftime("%d-%m-%Y")
