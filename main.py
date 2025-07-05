@@ -147,10 +147,10 @@ elif letter_type == "General Letter":
                                  "कनिष्ठ अभियंता (रेल पथ) भरसेड़ी",
                                  "कनिष्ठ अभियंता (रेल पथ) गजराबहरा",
                                  "कनिष्ठ अभियंता (रेल पथ) गोंदवाली"])
-    context["OfficerUnit"] = officer
+    context["AddressTo"] = officer
     context["Subject"] = subject
     context["Reference"] = reference
-    context["Memo"] = memo_input
+    context["DetailMemo"] = memo_input
     context["CopyTo"] = "\n".join([c.strip() for c in copies.split(",")])
 
 elif letter_type == "Exam NOC":
