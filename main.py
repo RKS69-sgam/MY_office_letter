@@ -23,23 +23,30 @@ sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 
 # === Placeholder Replace Function ===
+from docx import Document
+
+def replace_placeholder_in_para(paragraph, context):
+    full_text = ''.join(run.text for run in paragraph.runs)
+    replaced_text = full_text
+    for key, val in context.items():
+        replaced_text = replaced_text.replace(f"[{key}]", str(val))
+    if full_text != replaced_text:
+        # Clear all runs and set new single run
+        for run in paragraph.runs:
+            run.text = ''
+        paragraph.runs[0].text = replaced_text
+
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
+    # Replace in paragraphs
     for p in doc.paragraphs:
-        for key, val in context.items():
-            if f"[{key}]" in p.text:
-                for run in p.runs:
-                    if f"[{key}]" in run.text:
-                        run.text = run.text.replace(f"[{key}]", str(val))
+        replace_placeholder_in_para(p, context)
+    # Replace in tables
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for p in cell.paragraphs:
-                    for key, val in context.items():
-                        if f"[{key}]" in p.text:
-                            for run in p.runs:
-                                if f"[{key}]" in run.text:
-                                    run.text = run.text.replace(f"[{key}]", str(val))
+                    replace_placeholder_in_para(p, context)
     save_path = os.path.join("generated_letters", filename)
     doc.save(save_path)
     return save_path
