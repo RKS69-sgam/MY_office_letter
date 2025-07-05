@@ -19,7 +19,7 @@ template_files = {
 # === LOAD MASTER DATA ===
 employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
 sf11_register = pd.read_excel("assets/SF-11 Register.xlsx", sheet_name="SSE-SGAM")
-noc_register_path = "assets/ExamNOC_Report.xlsx"
+noc_register_path = "assets/Exam NOC_Report.xlsx"
 
 # === PLACEHOLDER REPLACEMENT FUNCTION ===
 def generate_word(template_path, context, filename):
