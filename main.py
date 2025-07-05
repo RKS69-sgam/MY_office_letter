@@ -124,7 +124,7 @@ elif letter_type == "Sick Memo":
     context["JoinDate"] = jd.strftime("%d-%m-%Y")
 
 elif letter_type == "General Letter":
-    officer = st.text_area(Whome")
+    officer = st.text_area("Whome")
     subject = st.text_input("Subject")
     reference = st.text_input("Reference")
     memo_input = st.text_area("Detailed Memo")
