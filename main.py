@@ -164,7 +164,7 @@ if st.button("📄 Generate Letter"):
     download_word(fpath)
 
     # SF-11 Register Entry
-    if letter_type in ["SF-11 For Other Reason"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter For Absent"):
+    if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter For Absent"):
         new_entry = pd.DataFrame([{
             "PFNumber": pf,
             "Name": hname,
@@ -175,21 +175,7 @@ if st.button("📄 Generate Letter"):
         }])
         updated = pd.concat([sf11_register, new_entry], ignore_index=True)
         updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-
-
- if letter_type in ["SF-11 Punishment Order"]:
-        new_entry = pd.DataFrame([{
-            "PFNumber": pf,
-            "Name": hname,
-            "Designation": desg,
-            "Letter No.": letter_no,
-            "Letter Date": letter_date.strftime("%d-%m-%Y"),
-            "Memo": context["Memo"]
-        }])
-        updated = pd.concat([sf11_register, new_entry], ignore_index=True)
-        updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-
-    
+   
     # Exam NOC Register Entry
     if letter_type == "Exam NOC" and count < 4:
         new_noc = {
