@@ -16,13 +16,13 @@ template_files = {
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
 }
 
-# === Load Data ===
-employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
+# === Load Paths ===
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
+employee_master_path = "assets/EMPLOYEE MASTER DATA.xlsx"
 
-# === Placeholder Replace Function ===
+# === Template Replace Functions ===
 from docx import Document
 
 def replace_placeholder_in_para(paragraph, context):
@@ -31,17 +31,14 @@ def replace_placeholder_in_para(paragraph, context):
     for key, val in context.items():
         replaced_text = replaced_text.replace(f"[{key}]", str(val))
     if full_text != replaced_text:
-        # Clear all runs and set new single run
         for run in paragraph.runs:
             run.text = ''
         paragraph.runs[0].text = replaced_text
 
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
-    # Replace in paragraphs
     for p in doc.paragraphs:
         replace_placeholder_in_para(p, context)
-    # Replace in tables
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
@@ -50,6 +47,92 @@ def generate_word(template_path, context, filename):
     save_path = os.path.join("generated_letters", filename)
     doc.save(save_path)
     return save_path
+
+def download_word(path):
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode()
+    name = os.path.basename(path)
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">📥 Download Word File</a>'
+    st.markdown(href, unsafe_allow_html=True)
+
+# === UI: Letter Type ===
+st.title("📄 Letter Generator For OFFICE OF THE SSE/PW/SGAM")
+letter_type = st.selectbox("📌 Select Letter Type:", list(template_files.keys()))
+
+# === Load Data As Per Letter Type ===
+if letter_type == "SF-11 Punishment Order":
+    df = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
+    df["Display"] = df.apply(lambda r: f"{r['PFNumber']} - {r['Name']} - {r['Letter No.']} - {r['Letter Date']}", axis=1)
+    selected = st.selectbox("👤 Select Employee", df["Display"].dropna())
+    row = df[df["Display"] == selected].iloc[0]
+    pf = row["PFNumber"]
+    hname = row["Name"]
+    desg = row["Designation"]
+    letter_no = row["Letter No."]
+    memo = row["Memo"]
+    unit = letter_no.split("/")[1] if "/" in letter_no else ""
+    unit_full = unit
+    short = letter_no.split("/")[0]
+    letter_date = st.date_input("📅 Letter Date", value=date.today())
+    context = {
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "EmployeeName": hname,
+        "Designation": desg,
+        "PFNumber": pf,
+        "ShortName": short,
+        "Unit": unit,
+        "UnitNumber": unit_full,
+        "LetterNo": letter_no,
+        "DutyDate": "",
+        "FromDate": "",
+        "ToDate": "",
+        "JoinDate": "",
+        "Memo": memo
+    }
+
+elif letter_type == "General Letter":
+    context = {
+        "LetterDate": date.today().strftime("%d-%m-%Y"),
+        "OfficerUnit": "",
+        "Subject": "",
+        "Reference": "",
+        "Memo": "",
+        "CopyTo": ""
+    }
+
+else:
+    employee_master = pd.read_excel(employee_master_path, sheet_name=None)
+    sheet = "Apr.25"
+    df = employee_master[sheet]
+    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
+    selected = st.selectbox("👤 Select Employee", df["Display"].dropna())
+    row = df[df["Display"] == selected].iloc[0]
+    pf = row[1]
+    hrms = row[2]
+    unit_full = str(row[4])
+    unit = unit_full[:2]
+    station = row[8]
+    ename = row[5]
+    hname = row[13]
+    desg = row[18]
+    short = row[14]
+    letter_no = f"{short}/{unit}/{station}"
+    letter_date = st.date_input("📅 Letter Date", value=date.today())
+    context = {
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "EmployeeName": hname,
+        "Designation": desg,
+        "PFNumber": pf,
+        "ShortName": short,
+        "Unit": unit,
+        "UnitNumber": unit,
+        "LetterNo": letter_no,
+        "DutyDate": "",
+        "FromDate": "",
+        "ToDate": "",
+        "JoinDate": "",
+        "Memo": ""
+    }
 
 # === File Download ===
 def download_word(path):
@@ -64,7 +147,7 @@ st.title("📄 Letter Generator For OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("📌 Select Letter Type:", list(template_files.keys()))
 
 # === Employee Selection ===
-sheet = st.selectbox("📋 Select Sheet", list(employee_master.keys()))
+sheet = st.selectbox("Apr.25", list(employee_master.keys()))
 df = employee_master[sheet]
 df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
 selected = st.selectbox("👤 Select Employee", df["Display"].dropna())
