@@ -170,7 +170,7 @@ if st.button("Generate Letter"):
         sf11_path = generate_word(sf11_template, context, sf11_filename)
 
         # ✅ Show both download links
-        st.success("✅ SF-11 और Duty Letter दोनों बन गए हैं")
+        st.success("✅ SF-11 & Duty Letter Generated")
         download_word(duty_path)
         download_word(sf11_path)
 
