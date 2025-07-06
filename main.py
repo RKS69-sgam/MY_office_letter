@@ -63,34 +63,44 @@ st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 # === Employee Data Source ===
+# === Employee Data Source ===
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
     df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']}", axis=1)
-    patra_kr = row["पत्र क्र."]  # Already filled in the register
-    dandadesh_krmank = f"{patra_kr}/D-1"
-else:
-    df = employee_master["Apr.25"]
-    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-elif letter_type == "General Letter":
-    df = pd.DataFrame()
-else:
-    df = employee_master["Apr.25"]
-    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-
-if letter_type != "General Letter":
     selected = st.selectbox("Select Employee", df["Display"].dropna())
     row = df[df["Display"] == selected].iloc[0]
-    pf = row[1]
-    hname = row[13] if letter_type != "SF-11 Punishment Order" else row["Name"]
-    desg = row[18] if letter_type != "SF-11 Punishment Order" else row["Designation"]
-    unit_full = str(row[4]) if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[1]
+    patra_kr = row["पत्र क्र."]
+    dandadesh_krmank = f"{patra_kr}/D-1"
+
+    pf = row["पी.एफ. क्रमांक"]
+    hname = row["कर्मचारी का नाम"]
+    desg = row["पदनाम"] if "पदनाम" in row else ""
+    unit_full = patra_kr.split("/")[1]
     unit = unit_full[:2]
-    short = row[14] if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[0]
-    letter_no = f"{short}/{unit}/{unit_full}"
-else:
+    short = patra_kr.split("/")[0]
+    letter_no = dandadesh_krmank
+
+elif letter_type == "General Letter":
+    df = pd.DataFrame()
     pf, hname, desg, unit, unit_full, short, letter_no = "", "", "", "", "", "", ""
 
+else:
+    df = employee_master["Apr.25"]
+    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
+    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    row = df[df["Display"] == selected].iloc[0]
+
+    pf = row[1]
+    hname = row[13]
+    desg = row[18]
+    unit_full = str(row[4])
+    unit = unit_full[:2]
+    short = row[14]
+    letter_no = f"{short}/{unit}/{unit_full}"
+
+# === Common Context ===
 letter_date = st.date_input("Letter Date", value=date.today())
+
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": hname,
