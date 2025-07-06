@@ -221,10 +221,10 @@ if (
 
 if letter_type == "SF-11 Punishment Order":
     # Find matching row in SF-11 Register by PFNumber and Letter No.
-    mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == letter_no)
+    mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == Patra_kr)
     if mask.any():
         idx = sf11_register[mask].index[0]
-        sf11_register.at[idx, "दण्डादेश क्रमांक"] = f"{patra_kr}/D-1"
+        sf11_register.at[idx, "दण्डादेश क्रमांक"] = dandadesh_krmank
         sf11_register.at[idx, "दण्ड का विवरण"] = context["Memo"]
     else:
         st.warning("⚠️ चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली। कृपया SF-11 Register जांचें।")
