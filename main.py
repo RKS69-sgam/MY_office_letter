@@ -62,9 +62,17 @@ def download_word(path):
 st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
+# === Employee Data Source ===
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
-    df["Display"] = df.apply(lambda r: f"{r['PFNumber']} - {r['Name']} - {r['Letter No.']}", axis=1)
+    df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']}", axis=1)
+    patra_kr = row["पत्र क्र."]  # Already filled in the register
+    dandadesh_krmank = f"{patra_kr}/D-1"
+elif letter_type == "General Letter":
+    df = pd.DataFrame()
+else:
+    df = employee_master["Apr.25"]
+    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
 elif letter_type == "General Letter":
     df = pd.DataFrame()
 else:
@@ -195,17 +203,34 @@ if st.button("Generate Letter"):
         download_word(path)
 
         # === SF-11 Register entry for relevant types ===
-        if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"]:
-            new_entry = pd.DataFrame([{
-                "PFNumber": pf,
-                "Name": hname,
-                "Designation": desg,
-                "Letter No.": letter_no,
-                "Letter Date": letter_date.strftime("%d-%m-%Y"),
-                "Memo": context["Memo"]
-            }])
-            updated = pd.concat([sf11_register, new_entry], ignore_index=True)
-            updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+
+if (
+    letter_type == "SF-11 For Other Reason"
+    or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only")
+):
+    new_entry = pd.DataFrame([{
+        "पी.एफ. क्रमांक": pf,
+        "कर्मचारी का नाम": hname,
+        "पदनाम": desg,
+        "पत्र क्र.": letter_no,
+        "दिनांक": letter_date.strftime("%d-%m-%Y"),
+        "दण्ड का विवरण": context["Memo"],
+    }])
+    updated = pd.concat([sf11_register, new_entry], ignore_index=True)
+    updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+
+if letter_type == "SF-11 Punishment Order":
+    # Find matching row in SF-11 Register by PFNumber and Letter No.
+    mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == letter_no)
+    if mask.any():
+        idx = sf11_register[mask].index[0]
+        sf11_register.at[idx, "दण्डादेश क्रमांक"] = f"{patra_kr}/D-1"
+        sf11_register.at[idx, "दण्ड का विवरण"] = context["Memo"]
+    else:
+        st.warning("⚠️ चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली। कृपया SF-11 Register जांचें।")
+    # Save updated file
+    sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+        
 
         # === Exam NOC Register entry ===
         if letter_type == "Exam NOC" and count < 4:
