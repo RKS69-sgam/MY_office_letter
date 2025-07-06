@@ -123,7 +123,7 @@ elif letter_type == "SF-11 For Other Reason":
 
 elif letter_type == "Sick Memo":
     memo_input = st.text_area("Memo")
-    context["Memo"] = memo_input
+    #context["Memo"] = memo_input
 
 elif letter_type == "General Letter":
     officer = st.text_area("To Officer/Unit")
