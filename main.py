@@ -158,15 +158,23 @@ elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = punishment
 
 if st.button("Generate Letter"):
-    temp = template_files[letter_type]
-    fname = f"{letter_type.replace('/', '-')}-{hname}.docx"
-    fpath = generate_word(temp, context, fname)
-    st.success("Letter generated.")
-    download_word(fpath)
+    if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
+        # === Duty Letter ===
+        duty_template = template_files["Duty Letter (For Absent)"]
+        duty_filename = f"DutyLetter-{hname}.docx"
+        duty_path = generate_word(duty_template, context, duty_filename)
 
-    if letter_type in ["SF-11 For Other Reason"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only"):
-       sf_template = "assests/SF-11 temp.docx"
-       sf_filename = f"SF-11-{hname}.docx
+        # === SF-11 Letter ===
+        sf11_template = template_files["SF-11 For Other Reason"]
+        sf11_filename = f"SF-11-{hname}.docx"
+        sf11_path = generate_word(sf11_template, context, sf11_filename)
+
+        # ✅ Show both download links
+        st.success("✅ SF-11 और Duty Letter दोनों बन गए हैं")
+        download_word(duty_path)
+        download_word(sf11_path)
+
+        # ✅ Entry in SF-11 Register
         new_entry = pd.DataFrame([{
             "PFNumber": pf,
             "Name": hname,
@@ -178,14 +186,37 @@ if st.button("Generate Letter"):
         updated = pd.concat([sf11_register, new_entry], ignore_index=True)
         updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
 
-    if letter_type == "Exam NOC" and count < 4:
-        new_noc = {
-            "PFNumber": pf,
-            "Name": hname,
-            "Year": year,
-            "Exam": exam_name,
-            "Date": letter_date.strftime("%d-%m-%Y"),
-            "Memo": context["Memo"]
-        }
-        df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
-        df_noc.to_excel(noc_register_path, index=False)
+    else:
+        # === For all other cases: generate one letter ===
+        template = template_files[letter_type]
+        filename = f"{letter_type.replace('/', '-')}-{hname}.docx"
+        path = generate_word(template, context, filename)
+        st.success("✅ Letter generated successfully!")
+        download_word(path)
+
+        # === SF-11 Register entry for relevant types ===
+        if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"]:
+            new_entry = pd.DataFrame([{
+                "PFNumber": pf,
+                "Name": hname,
+                "Designation": desg,
+                "Letter No.": letter_no,
+                "Letter Date": letter_date.strftime("%d-%m-%Y"),
+                "Memo": context["Memo"]
+            }])
+            updated = pd.concat([sf11_register, new_entry], ignore_index=True)
+            updated.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+
+        # === Exam NOC Register entry ===
+        if letter_type == "Exam NOC" and count < 4:
+            new_noc = {
+                "PFNumber": pf,
+                "Name": hname,
+                "Year": year,
+                "Exam": exam_name,
+                "Date": letter_date.strftime("%d-%m-%Y"),
+                "Memo": context["Memo"]
+            }
+            df_noc = df_noc.append(new_noc, ignore_index=True)
+            df_noc.to_excel(noc_register_path, index=False)
+
