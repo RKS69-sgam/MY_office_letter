@@ -77,7 +77,7 @@ if letter_type != "General Letter":
     pf = row[1]
     hname = row[13] if letter_type != "SF-11 Punishment Order" else row["Name"]
     desg = row[18] if letter_type != "SF-11 Punishment Order" else row["Designation"]
-    #unit_full = str(row[4]) if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[1]
+    unit_full = str(row[4]) if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[1]
     unit = unit_full[:2]
     short = row[14] if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[0]
     letter_no = f"{short}/{unit}/{unit_full}"
