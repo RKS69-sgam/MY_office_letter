@@ -121,9 +121,9 @@ elif letter_type == "SF-11 For Other Reason":
     memo_input = st.text_area("Memo")
     context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
 
-elif letter_type == "Sick Memo":
-    memo_input = st.text_area("Memo")
-    #context["Memo"] = memo_input
+#elif letter_type == "Sick Memo":
+    #memo_input = st.text_area("Memo")
+   # context["Memo"] = memo_input
 
 elif letter_type == "General Letter":
     officer = st.text_area("To Officer/Unit")
