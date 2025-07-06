@@ -68,8 +68,6 @@ if letter_type == "SF-11 Punishment Order":
     df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']}", axis=1)
     patra_kr = row["पत्र क्र."]  # Already filled in the register
     dandadesh_krmank = f"{patra_kr}/D-1"
-elif letter_type == "General Letter":
-    df = pd.DataFrame()
 else:
     df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
