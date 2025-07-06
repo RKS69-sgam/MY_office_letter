@@ -164,7 +164,9 @@ if st.button("Generate Letter"):
     st.success("Letter generated.")
     download_word(fpath)
 
-    if letter_type in ["SF-11 For Other Reason", "SF-11 Punishment Order"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only"):
+    if letter_type in ["SF-11 For Other Reason"] or (letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only"):
+       sf_template = "assests/SF-11 temp.docx"
+       sf_filename = f"SF-11-{hname}.docx
         new_entry = pd.DataFrame([{
             "PFNumber": pf,
             "Name": hname,
