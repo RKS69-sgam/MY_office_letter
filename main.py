@@ -5,7 +5,7 @@ import base64
 from docx import Document
 from datetime import datetime, date, timedelta
 
-# === Output Folder and Templates ===
+# === Setup Output Folder & Template Paths ===
 os.makedirs("generated_letters", exist_ok=True)
 template_files = {
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -16,24 +16,29 @@ template_files = {
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
 }
 
-# === Load Paths ===
+# === Load Registers ===
+employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
-employee_master_path = "assets/EMPLOYEE MASTER DATA.xlsx"
+if os.path.exists(noc_register_path):
+    df_noc = pd.read_excel(noc_register_path)
+else:
+    df_noc = pd.DataFrame(columns=["PFNumber", "Name", "Year", "Exam", "Date", "Memo"])
 
-# === Template Replace Functions ===
-from docx import Document
-
+# === Word Placeholder Replace ===
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
-    replaced_text = full_text
+    new_text = full_text
     for key, val in context.items():
-        replaced_text = replaced_text.replace(f"[{key}]", str(val))
-    if full_text != replaced_text:
+        new_text = new_text.replace(f"[{key}]", str(val))
+    if new_text != full_text:
         for run in paragraph.runs:
             run.text = ''
-        paragraph.runs[0].text = replaced_text
+        if paragraph.runs:
+            paragraph.runs[0].text = new_text
+        else:
+            paragraph.add_run(new_text)
 
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
@@ -44,9 +49,9 @@ def generate_word(template_path, context, filename):
             for cell in row.cells:
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
-    save_path = os.path.join("generated_letters", filename)
-    doc.save(save_path)
-    return save_path
+    output_path = os.path.join("generated_letters", filename)
+    doc.save(output_path)
+    return output_path
 
 def download_word(path):
     with open(path, "rb") as f:
@@ -55,84 +60,54 @@ def download_word(path):
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">📥 Download Word File</a>'
     st.markdown(href, unsafe_allow_html=True)
 
-# === UI: Letter Type ===
-st.title("📄 Letter Generator For OFFICE OF THE SSE/PW/SGAM")
+# === UI ===
+st.title("📄 Letter Generator For SSE/PW/SGAM")
 letter_type = st.selectbox("📌 Select Letter Type:", list(template_files.keys()))
 
-# === Load Data As Per Letter Type ===
+# === Employee Data Source ===
 if letter_type == "SF-11 Punishment Order":
-    df = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
-    df["Display"] = df.apply(lambda r: f"{r['PFNumber']} - {r['Name']} - {r['Letter No.']} - {r['Letter Date']}", axis=1)
-    selected = st.selectbox("👤 Select Employee", df["Display"].dropna())
-    row = df[df["Display"] == selected].iloc[0]
-    pf = row["PFNumber"]
-    hname = row["Name"]
-    desg = row["Designation"]
-    letter_no = row["Letter No."]
-    memo = row["Memo"]
-    unit = letter_no.split("/")[1] if "/" in letter_no else ""
-    unit_full = unit
-    short = letter_no.split("/")[0]
-    letter_date = st.date_input("📅 Letter Date", value=date.today())
-    context = {
-        "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "EmployeeName": hname,
-        "Designation": desg,
-        "PFNumber": pf,
-        "ShortName": short,
-        "Unit": unit,
-        "UnitNumber": unit_full,
-        "LetterNo": letter_no,
-        "DutyDate": "",
-        "FromDate": "",
-        "ToDate": "",
-        "JoinDate": "",
-        "Memo": memo
-    }
-
+    df = sf11_register
+    df["Display"] = df.apply(lambda r: f"{r['PFNumber']} - {r['Name']} - {r['Letter No.']}", axis=1)
 elif letter_type == "General Letter":
-    context = {
-        "LetterDate": date.today().strftime("%d-%m-%Y"),
-        "OfficerUnit": "",
-        "Subject": "",
-        "Reference": "",
-        "Memo": "",
-        "CopyTo": ""
-    }
-
+    df = pd.DataFrame()
 else:
-    employee_master = pd.read_excel(employee_master_path, sheet_name=None)
-    sheet = "Apr.25"
-    df = employee_master[sheet]
+    df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
+
+if letter_type != "General Letter":
     selected = st.selectbox("👤 Select Employee", df["Display"].dropna())
     row = df[df["Display"] == selected].iloc[0]
     pf = row[1]
-    hrms = row[2]
-    unit_full = str(row[4])
+    hname = row[13] if letter_type != "SF-11 Punishment Order" else row["Name"]
+    desg = row[18] if letter_type != "SF-11 Punishment Order" else row["Designation"]
+    unit_full = str(row[4]) if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[1]
     unit = unit_full[:2]
-    station = row[8]
-    ename = row[5]
-    hname = row[13]
-    desg = row[18]
-    short = row[14]
-    letter_no = f"{short}/{unit}/{station}"
-    letter_date = st.date_input("📅 Letter Date", value=date.today())
-    context = {
-        "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "EmployeeName": hname,
-        "Designation": desg,
-        "PFNumber": pf,
-        "ShortName": short,
-        "Unit": unit,
-        "UnitNumber": unit,
-        "LetterNo": letter_no,
-        "DutyDate": "",
-        "FromDate": "",
-        "ToDate": "",
-        "JoinDate": "",
-        "Memo": ""
-    }
+    short = row[14] if letter_type != "SF-11 Punishment Order" else row["Letter No."].split("/")[0]
+    letter_no = f"{short}/{unit}/{unit_full}"
+else:
+    pf, hname, desg, unit, unit_full, short, letter_no = "", "", "", "", "", "", ""
+
+# === Base Context ===
+letter_date = st.date_input("📅 Letter Date", value=date.today())
+context = {
+    "LetterDate": letter_date.strftime("%d-%m-%Y"),
+    "EmployeeName": hname,
+    "Designation": desg,
+    "PFNumber": pf,
+    "ShortName": short,
+    "Unit": unit,
+    "UnitNumber": unit_full,
+    "LetterNo": letter_no,
+    "DutyDate": "",
+    "FromDate": "",
+    "ToDate": "",
+    "JoinDate": "",
+    "Memo": "",
+    "OfficerUnit": "",
+    "Subject": "",
+    "Reference": "",
+    "CopyTo": ""
+}
 
 # === File Download ===
 def download_word(path):
