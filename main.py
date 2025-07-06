@@ -59,7 +59,7 @@ def download_word(path):
     st.markdown(href, unsafe_allow_html=True)
 
 # UI
-st.title("Letter Generator For OFFICE OF THE SSE/PW/SGAM")
+st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 if letter_type == "SF-11 Punishment Order":
