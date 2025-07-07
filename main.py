@@ -4,8 +4,10 @@ import streamlit as st
 import pandas as pd
 import os
 import base64
+import datetime  # ये सबसे ऊपर या इस block से पहले होना चाहिए
 from docx import Document
 from datetime import date, timedelta
+
 
 # Create output folder
 os.makedirs("generated_letters", exist_ok=True)
@@ -216,6 +218,8 @@ elif letter_type == "SF-11 Punishment Order":
         "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
     ])
 
+
+
 if st.button("Generate Letter"):
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
         duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
@@ -224,24 +228,26 @@ if st.button("Generate Letter"):
         download_SF-11(sf11_path)
 
     elif letter_type == "General Letter":
-        # Get today's date
+        # Get today's date in dd-mm-yyyy format
         today_str = datetime.datetime.now().strftime("%d-%m-%Y")
 
-        # Get clean filename parts
+        # Clean filename parts
         filename_part1 = context.get("FileName", "").replace("/", "-").strip()
         filename_part2 = context.get("OfficerName", "").strip()
         filename_part3 = today_str
         filename_part4 = context.get("Subject", "").replace("विषय:-", "").strip()
 
-        # Combine into filename
+        # Final filename assembly
         final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4}".strip()
         final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
+
         word_path = generate_word(template_files["General Letter"], context, f"{final_name}.docx")
         download_Letter(word_path)
 
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_Letter(word_path)
+
 
 
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
