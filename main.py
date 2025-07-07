@@ -158,10 +158,10 @@ elif letter_type == "General Letter":
                                                              "अन्‍य"])
     context["OfficeAddress"] = st.selectbox("पता",["","प.म.रे. ब्‍योहारी","प.म.रे. जबलपुर","सरईग्राम","देवराग्राम","बरगवॉं","निवासरोड",
                                                   "भरसेड़ी","गजराबहरा","गोंदवाली","अन्‍य"])
-    context["Subject"] = st.text_input("विषय")
-    context["Reference"] = st.text_input("संदर्भ")
+    context["Subject"] = "विषय:-    " + st.text_input("विषय")
+    context["Reference"] = "संदर्भ:-    " +st.text_input("संदर्भ")
     context["Memo"] = st.text_area("मुख्‍य विवरण")
-    context["CopyTo"] = "\n".join([c.strip() for c in st.text_input("प्रतिलिपि").split(",")])
+    context["CopyTo"] = "प्रतिलिपि:-    " + "\n".join([c.strip() for c in st.text_input("प्रतिलिपि").split(",")])
 elif letter_type == "Exam NOC":
     exam_name = st.text_input("Exam Name")
     year = st.selectbox("NOC Year", [2025, 2024])
