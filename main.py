@@ -24,7 +24,7 @@ employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=N
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
-df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PFNumber", "Name", "Year", "Exam", "Date", "Memo"])
+df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
 
 # Replace function for paragraphs and tables
 def replace_placeholder_in_para(paragraph, context):
@@ -149,7 +149,7 @@ elif letter_type == "Exam NOC":
     if count >= 4:
         st.warning("Already 4 NOCs taken.")
     else:
-        context["Memo"] = f"उपरोक्त कर्मचारी {exam_name} परीक्षा हेतु NOC हेतु पात्र है। यह इस वर्ष की {count+1}वीं स्वीकृति होगी।"
+        context["Memo"] = ""
 
 elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = st.selectbox("Punishment Type", [
@@ -192,16 +192,16 @@ if st.button("Generate Letter"):
             sf11_register.at[i, "दण्ड का विवरण"] = context["Memo"]
             sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
         else:
-            st.warning("⚠️ चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली।")
+            st.warning("\u26a0\ufe0f चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली।")
 
     if letter_type == "Exam NOC" and count < 4:
-    new_noc = {
-        "PF Number": pf,
-        "Employee Name": hname,
-        "Designation": desg,
-        "NOC Year": year,
-        "Application No.": count + 1,
-        "Exam Name": exam_name
-    }
-    df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
-    df_noc.to_excel(noc_register_path, index=False)
+        new_noc = {
+            "PF Number": pf,
+            "Employee Name": hname,
+            "Designation": desg,
+            "NOC Year": year,
+            "Application No.": count + 1,
+            "Exam Name": exam_name
+        }
+        df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
+        df_noc.to_excel(noc_register_path, index=False)
