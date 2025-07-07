@@ -133,7 +133,7 @@ elif letter_type == "SF-11 For Other Reason":
     context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
 elif letter_type == "General Letter":
     context["FileName"] = st.selectbox("File Name",["","STAFF-IV","OFFICE ORDER","STAFF-III","QAURTER-1","ARREAR","CEA/STAFF-IV","CEA/STAFF-III","PW-SGAM","MISC."])
-    context["OfficerName"] = st.selcetbox("अधिकारी/कर्मचारी",["==Select==",
+    context["OfficerName"] = st.selectbox("अधिकारी/कर्मचारी",["==Select==",
                                                             "सहायक मण्‍डल अभियंता",
                                                              "मण्‍डल अभिंयता (पूर्व)",
                                                              "मण्‍डल अभिंयता (पश्चिम)",
