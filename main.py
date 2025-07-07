@@ -7,11 +7,11 @@ import base64
 from docx import Document
 from datetime import date, timedelta
 
-Create output folder
+#Create output folder
 
 os.makedirs("generated_letters", exist_ok=True)
 
-File paths
+#File paths
 
 template_files = {
 "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -28,7 +28,7 @@ sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
 
-Replace function for paragraphs and tables
+#Replace function for paragraphs and tables
 
 def replace_placeholder_in_para(paragraph, context):
 full_text = ''.join(run.text for run in paragraph.runs)
@@ -63,12 +63,12 @@ name = os.path.basename(path)
 href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">Download Word File</a>'
 st.markdown(href, unsafe_allow_html=True)
 
-=== UI ===
+#=== UI ===
 
 st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
-=== Select Employee Logic ===
+#=== Select Employee Logic ===
 
 if letter_type == "SF-11 Punishment Order":
 df = sf11_register
@@ -159,10 +159,10 @@ else:
     # Prepare the table content to inject  
     table_html = f"""  
     | PF Number | Employee Name | Designation | NOC Year | Application No. | Exam Name |  
-    |-----------|----------------|-------------|----------|------------------|-----------|  
-    | {pf} | {hname} | {desg} | {year} | {application_no} | {exam_name} |  
+    | {pf}      | {hname}       | {desg}         | {year} | {application_no} | {exam_name} |  
     """  
-    context["PFNumber"] = table_html  # Injecting this in place of [PFNumber] placeholder
+    context["PFNumber"] = table_html  
+# Injecting this in place of [PFNumber] placeholder
 
 elif letter_type == "SF-11 Punishment Order":
 context["Memo"] = st.selectbox("Punishment Type", [
