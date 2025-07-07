@@ -147,7 +147,7 @@ elif letter_type == "General Letter":
         "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"
     ])
     if officer_option == "अन्‍य":
-        officer_option = st.text_input("Specify Other Officer")
+        officer_option = st.text_input("अन्‍य का नाम/पदनाम/एजेंसी का नाम लिखें")
     context["OfficerName"] = officer_option
 
     address_option = st.selectbox("पता", [
@@ -155,7 +155,7 @@ elif letter_type == "General Letter":
         "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"
     ])
     if address_option == "अन्‍य":
-        address_option = st.text_input("Specify Other Address")
+        address_option = st.text_input("अन्‍य का पता लिखें")
     context["OfficeAddress"] = address_option
 
     subject_input = st.text_input("विषय")
@@ -166,7 +166,7 @@ elif letter_type == "General Letter":
 
     context["Memo"] = st.text_area("मुख्‍य विवरण")
 
-    copy_input = st.text_input("प्रतिलिपि (comma-separated)")
+    copy_input = st.text_input("प्रतिलिपि")
     context["CopyTo"] = f"प्रतिलिपि:-    " + "\n".join([c.strip() for c in copy_input.split(",") if c.strip()]) if copy_input.strip() else ""
 
 elif letter_type == "Exam NOC":
