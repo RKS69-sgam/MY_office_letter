@@ -145,7 +145,7 @@ elif letter_type == "General Letter":
 elif letter_type == "Exam NOC":
     exam_name = st.text_input("Exam Name")
     year = st.selectbox("NOC Year", [2025, 2024])
-    count = sum((df_noc["PFNumber"] == pf) & (df_noc["Year"] == year))
+    count = sum((df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year))
     if count >= 4:
         st.warning("Already 4 NOCs taken.")
     else:
