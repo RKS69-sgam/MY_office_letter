@@ -245,7 +245,7 @@ elif letter_type == "General Letter":
 
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
-    return output_path
+    return output_path else ""
 elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = st.selectbox("Punishment Type", [
         "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
