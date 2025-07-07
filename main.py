@@ -150,24 +150,48 @@ elif letter_type == "General Letter":
         officer_option = st.text_input("अन्‍य का नाम/पदनाम/एजेंसी का नाम लिखें")
     context["OfficerName"] = officer_option
 
-    address_option = st.selectbox("पता", [
-        "", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं",
-        "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"
-    ])
+    # Address dropdown logic based on officer
+    beyohari_officers = [
+        "सहायक मण्‍डल अभियंता", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)",
+        "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "शाखा सचिव (WCRMS)"
+    ]
+    jbp_officers = [
+        "मण्‍डल अभिंयता (पूर्व)", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)",
+        "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)",
+        "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)",
+        "महामंत्री (WCRMS)"
+    ]
+    if officer_option == "कनिष्‍ठ अभियंता (रेल पथ)":
+        address_choices = ["", "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
+    elif officer_option in beyohari_officers:
+        address_choices = ["", "प.म.रे. ब्‍योहारी", "अन्‍य"]
+    elif officer_option in jbp_officers:
+        address_choices = ["", "प.म.रे. जबलपुर", "अन्‍य"]
+    else:
+        address_choices = ["", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं",
+                           "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
+
+    address_option = st.selectbox("पता", address_choices)
     if address_option == "अन्‍य":
         address_option = st.text_input("अन्‍य का पता लिखें")
     context["OfficeAddress"] = address_option
 
+    # Subject
     subject_input = st.text_input("विषय")
     context["Subject"] = f"विषय:-    {subject_input}" if subject_input.strip() else ""
 
+    # Reference
     ref_input = st.text_input("संदर्भ")
     context["Reference"] = f"संदर्भ:-    {ref_input}" if ref_input.strip() else ""
 
+    # Main Memo
     context["Memo"] = st.text_area("मुख्‍य विवरण")
 
+    # Copy To
     copy_input = st.text_input("प्रतिलिपि")
-    context["CopyTo"] = f"प्रतिलिपि:-    " + "\n".join([c.strip() for c in copy_input.split(",") if c.strip()]) if copy_input.strip() else ""
+    context["CopyTo"] = f"प्रतिलिपि:-    " + "\n".join(
+        [c.strip() for c in copy_input.split(",") if c.strip()]
+    ) if copy_input.strip() else ""
 
 elif letter_type == "Exam NOC":
     exam_name = st.text_input("Exam Name")
