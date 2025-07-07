@@ -222,7 +222,8 @@ if st.button("Generate Letter"):
         sf11_path = generate_word(template_files["SF-11 For Other Reason"], context, f"SF-11-{hname}.docx")
         download_DutyLetter(duty_path)
         download_SF-11(sf11_path)
-        elif letter_type == "General Letter":
+
+    elif letter_type == "General Letter":
         # Get today's date
         today_str = datetime.datetime.now().strftime("%d-%m-%Y")
 
@@ -237,9 +238,11 @@ if st.button("Generate Letter"):
         final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
         word_path = generate_word(template_files["General Letter"], context, f"{final_name}.docx")
         download_Letter(word_path)
+
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_Letter(word_path)
+
 
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
         new_entry = pd.DataFrame([{ 
