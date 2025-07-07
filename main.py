@@ -156,7 +156,7 @@ elif letter_type == "General Letter":
                                                              "मण्‍डल सचिव (WCRMS)",
                                                              "महामंत्री (WCRMS)"
                                                              "अन्‍य"])
-    context["OfficeAddress"] = st.selctbox("पता",["","प.म.रे. ब्‍योहारी","प.म.रे. जबलपुर","सरईग्राम","देवराग्राम","बरगवॉं","निवासरोड",
+    context["OfficeAddress"] = st.selectbox("पता",["","प.म.रे. ब्‍योहारी","प.म.रे. जबलपुर","सरईग्राम","देवराग्राम","बरगवॉं","निवासरोड",
                                                   "भरसेड़ी","गजराबहरा","गोंदवाली","अन्‍य"])
     context["Subject"] = st.text_input("Subject")
     context["Reference"] = st.text_input("Reference")
