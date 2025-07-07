@@ -235,26 +235,43 @@ elif letter_type == "General Letter":
 
 
 # === Exam NOC UI ===
-if letter_type == "Exam NOC":
-   # pf = st.text_input("PF Number")
-   # name = st.text_input("Employee Name")
-    #desg = st.text_input("Designation")
-    exam_name = st.text_input("Exam Name")
-    year = st.number_input("NOC Year", min_value=2020, value=date.today().year)
-
+elif letter_type == "Exam NOC":
+    df = employee_master["Apr.25"]
+    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
+    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    row = df[df["Display"] == selected].iloc[0]
+    
+    pf = row[1]
+    name = row[13]
+    desg = row[18]
+    unit_full = str(row[4])
+    unit = unit_full[:2]
+    short = row[14]
+    
+    year = date.today().year
     df_match = df_noc[(df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year)]
     count = df_match.shape[0]
 
     if count >= 4:
-        st.warning("This employee has already taken 4 NOCs this year.")
+        st.warning("यह कर्मचारी इस वर्ष पहले ही 4 NOC ले चुका है।")
     else:
+        exam_name = st.text_input("Exam Name")
+        term = st.text_input("Term of NOC")  # You can rename as needed
+
         context.update({
             "PFNumberVal": pf,
             "EmployeeName": name,
             "Designation": desg,
             "NOCYear": year,
             "AppNo": count + 1,
-            "ExamName": exam_name
+            "ExamName": exam_name,
+            "Term": term,
+            "PFNumber": pf,
+            "ShortName": short,
+            "Unit": unit,
+            "UnitNumber": unit_full,
+            "LetterNo": f"{short}/{unit}/{unit_full}",
+            "LetterDate": date.today().strftime("%d-%m-%Y")
         })
 
 elif letter_type == "SF-11 Punishment Order":
