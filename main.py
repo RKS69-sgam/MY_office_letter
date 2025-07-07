@@ -31,7 +31,7 @@ df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) e
 #Replace function for paragraphs and tables
 
 def replace_placeholder_in_para(paragraph, context):
-full_text = ''.join(run.text for run in paragraph.runs)
+full_text = ".join(run.text for run in paragraph.runs)
 new_text = full_text
 for key, val in context.items():
 new_text = new_text.replace(f"[{key}]", str(val))
