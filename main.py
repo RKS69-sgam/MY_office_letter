@@ -195,13 +195,13 @@ if st.button("Generate Letter"):
             st.warning("⚠️ चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली।")
 
     if letter_type == "Exam NOC" and count < 4:
-        new_noc = {
-            "PFNumber": pf,
-            "Name": hname,
-            "Year": year,
-            "Exam": exam_name,
-            "Date": letter_date.strftime("%d-%m-%Y"),
-            "Memo": context["Memo"]
-        }
-        df_noc = df_noc.append(new_noc, ignore_index=True)
-        df_noc.to_excel(noc_register_path, index=False)
+    new_noc = {
+        "PF Number": pf,
+        "Employee Name": hname,
+        "Designation": desg,
+        "NOC Year": year,
+        "Application No.": count + 1,
+        "Exam Name": exam_name
+    }
+    df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
+    df_noc.to_excel(noc_register_path, index=False)
