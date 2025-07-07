@@ -236,9 +236,9 @@ elif letter_type == "General Letter":
 
 # === Exam NOC UI ===
 if letter_type == "Exam NOC":
-    pf = st.text_input("PF Number")
-    name = st.text_input("Employee Name")
-    desg = st.text_input("Designation")
+   # pf = st.text_input("PF Number")
+   # name = st.text_input("Employee Name")
+    #desg = st.text_input("Designation")
     exam_name = st.text_input("Exam Name")
     year = st.number_input("NOC Year", min_value=2020, value=date.today().year)
 
