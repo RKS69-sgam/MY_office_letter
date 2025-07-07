@@ -1,11 +1,14 @@
 # FINAL STREAMLIT LETTER GENERATOR APP WITH ALL FIXES
 
+# FINAL FIXED CODE for General Letter and Exam NOC with full features
 import streamlit as st
 import pandas as pd
 import os
 import base64
 from docx import Document
 from datetime import date, timedelta
+import datetime
+from docx.shared import Inches
 
 
 # Create output folder
@@ -27,7 +30,8 @@ sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
 
-# Replace function for paragraphs and tables
+# Placeholder replace in paragraph
+
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
     new_text = full_text
@@ -41,34 +45,54 @@ def replace_placeholder_in_para(paragraph, context):
         else:
             paragraph.add_run(new_text)
 
-from docx.shared import Inches
-
+# === Generate Word Function ===
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
-    
-    # Placeholder replacement
+
+    # Paragraphs
     for p in doc.paragraphs:
         replace_placeholder_in_para(p, context)
-    
+
+    # Table cells
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
 
-def generate_word(template_path, context, filename):
-    doc = Document(template_path)
-    for p in doc.paragraphs:
-        replace_placeholder_in_para(p, context)
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    replace_placeholder_in_para(p, context)
+    # Special Case: Exam NOC table
+    if context.get("LetterType") == "Exam NOC":
+        for i, paragraph in enumerate(doc.paragraphs):
+            if "[PFNumber]" in paragraph.text:
+                p = paragraph._element
+                p.getparent().remove(p)
+                p._p = p._element = None
+
+                table = doc.add_table(rows=1, cols=6)
+                table.style = "Table Grid"
+                table.autofit = True
+
+                hdr = table.rows[0].cells
+                hdr[0].text = "PF Number"
+                hdr[1].text = "Employee Name"
+                hdr[2].text = "Designation"
+                hdr[3].text = "NOC Year"
+                hdr[4].text = "Application No."
+                hdr[5].text = "Exam Name"
+
+                row = table.add_row().cells
+                row[0].text = str(context["PFNumberVal"])
+                row[1].text = context["EmployeeName"]
+                row[2].text = context["Designation"]
+                row[3].text = str(context["NOCYear"])
+                row[4].text = str(context["AppNo"])
+                row[5].text = context["ExamName"]
+                break
+
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
     return output_path
-
+#Download Function 
 def download_word(path):
     with open(path, "rb") as f:
         b64 = base64.b64encode(f.read()).decode()
@@ -210,42 +234,29 @@ elif letter_type == "General Letter":
     ) if copy_input.strip() else ""
 
 
+# === Exam NOC UI ===
+if letter_type == "Exam NOC":
+    pf = st.text_input("PF Number")
+    name = st.text_input("Employee Name")
+    desg = st.text_input("Designation")
+    exam_name = st.text_input("Exam Name")
+    year = st.number_input("NOC Year", min_value=2020, value=date.today().year)
 
-    # ==== Special Case: Insert Table for Exam NOC ====
-    elif context.get("LetterType") == "Exam NOC":
-        for i, paragraph in enumerate(doc.paragraphs):
-            if "[PFNumber]" in paragraph.text:
-                # Remove placeholder paragraph
-                p = paragraph._element
-                p.getparent().remove(p)
-                p._p = p._element = None
+    df_match = df_noc[(df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year)]
+    count = df_match.shape[0]
 
-                # Insert table after this position
-                table = doc.add_table(rows=1, cols=6)
-                table.style = "Table Grid"  # Bordered table
-                table.autofit = True
+    if count >= 4:
+        st.warning("This employee has already taken 4 NOCs this year.")
+    else:
+        context.update({
+            "PFNumberVal": pf,
+            "EmployeeName": name,
+            "Designation": desg,
+            "NOCYear": year,
+            "AppNo": count + 1,
+            "ExamName": exam_name
+        })
 
-                hdr = table.rows[0].cells
-                hdr[0].text = "PF Number"
-                hdr[1].text = "Employee Name"
-                hdr[2].text = "Designation"
-                hdr[3].text = "NOC Year"
-                hdr[4].text = "Application No."
-                hdr[5].text = "Exam Name"
-
-                # Add data row
-                row = table.add_row().cells
-                row[0].text = str(context["PFNumberVal"])
-                row[1].text = context["EmployeeName"]
-                row[2].text = context["Designation"]
-                row[3].text = str(context["NOCYear"])
-                row[4].text = str(context["AppNo"])
-                row[5].text = context["ExamName"]
-                break
-
-    output_path = os.path.join("generated_letters", filename)
-    doc.save(output_path)
-    return output_path else ""
 elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = st.selectbox("Punishment Type", [
         "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
