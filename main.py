@@ -41,6 +41,21 @@ def replace_placeholder_in_para(paragraph, context):
         else:
             paragraph.add_run(new_text)
 
+from docx.shared import Inches
+
+def generate_word(template_path, context, filename):
+    doc = Document(template_path)
+    
+    # Placeholder replacement
+    for p in doc.paragraphs:
+        replace_placeholder_in_para(p, context)
+    
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    replace_placeholder_in_para(p, context)
+
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
     for p in doc.paragraphs:
@@ -194,23 +209,10 @@ elif letter_type == "General Letter":
         [c.strip() for c in copy_input.split(",") if c.strip()]
     ) if copy_input.strip() else ""
 
-from docx.shared import Inches
 
-def generate_word(template_path, context, filename):
-    doc = Document(template_path)
-    
-    # Placeholder replacement
-    for p in doc.paragraphs:
-        replace_placeholder_in_para(p, context)
-    
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    replace_placeholder_in_para(p, context)
 
     # ==== Special Case: Insert Table for Exam NOC ====
-    if context.get("LetterType") == "Exam NOC":
+    elif context.get("LetterType") == "Exam NOC":
         for i, paragraph in enumerate(doc.paragraphs):
             if "[PFNumber]" in paragraph.text:
                 # Remove placeholder paragraph
