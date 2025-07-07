@@ -132,36 +132,43 @@ elif letter_type == "SF-11 For Other Reason":
     memo_input = st.text_area("Memo")
     context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
 elif letter_type == "General Letter":
-    context["FileName"] = st.selectbox("File Name",["","STAFF-IV","OFFICE ORDER","STAFF-III","QAURTER-1","ARREAR","CEA/STAFF-IV","CEA/STAFF-III","PW-SGAM","MISC."])
-    context["OfficerName"] = st.selectbox("अधिकारी/कर्मचारी",["",
-                                                            "सहायक मण्‍डल अभियंता",
-                                                             "मण्‍डल अभिंयता (पूर्व)",
-                                                             "मण्‍डल अभिंयता (पश्चिम)",
-                                                             "मण्‍डल रेल प्रबंधक (कार्मिक)",
-                                                             "मण्‍डल रेल प्रबंधक (कार्य)",
-                                                            "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (कार्य)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (T&D)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (S&T)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (USFD)",
-                                                             "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)",
-                                                             "कनिष्‍ठ अभियंता (रेल पथ)",
-                                                             "कनिष्‍ठ अभियंता (कार्य)",
-                                                             "कनिष्‍ठ अभियंता (विद्युत)",
-                                                             "कनिष्‍ठ अभियंता (T&D)",
-                                                             "कनिष्‍ठ अभियंता (S&T)",
-                                                             "शाखा सचिव (WCRMS)", 
-                                                             "मण्‍डल अध्‍यक्ष (WCRMS)",
-                                                             "मण्‍डल सचिव (WCRMS)",
-                                                             "महामंत्री (WCRMS)",
-                                                             "अन्‍य"])
-    context["OfficeAddress"] = st.selectbox("पता",["","प.म.रे. ब्‍योहारी","प.म.रे. जबलपुर","सरईग्राम","देवराग्राम","बरगवॉं","निवासरोड",
-                                                  "भरसेड़ी","गजराबहरा","गोंदवाली","अन्‍य"])
-    context["Subject"] = "विषय:-    " + st.text_input("विषय")
-    context["Reference"] = "संदर्भ:-    " +st.text_input("संदर्भ")
+    context["FileName"] = st.selectbox("File Name", [
+        "", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR",
+        "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."
+    ])
+
+    officer_option = st.selectbox("अधिकारी/कर्मचारी", [
+        "", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)", "मण्‍डल अभिंयता (पश्चिम)",
+        "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)",
+        "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)",
+        "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)",
+        "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)",
+        "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)",
+        "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"
+    ])
+    if officer_option == "अन्‍य":
+        officer_option = st.text_input("Specify Other Officer")
+    context["OfficerName"] = officer_option
+
+    address_option = st.selectbox("पता", [
+        "", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं",
+        "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"
+    ])
+    if address_option == "अन्‍य":
+        address_option = st.text_input("Specify Other Address")
+    context["OfficeAddress"] = address_option
+
+    subject_input = st.text_input("विषय")
+    context["Subject"] = f"विषय:-    {subject_input}" if subject_input.strip() else ""
+
+    ref_input = st.text_input("संदर्भ")
+    context["Reference"] = f"संदर्भ:-    {ref_input}" if ref_input.strip() else ""
+
     context["Memo"] = st.text_area("मुख्‍य विवरण")
-    context["CopyTo"] = "प्रतिलिपि:-    " + "\n".join([c.strip() for c in st.text_input("प्रतिलिपि").split(",")])
+
+    copy_input = st.text_input("प्रतिलिपि (comma-separated)")
+    context["CopyTo"] = f"प्रतिलिपि:-    " + "\n".join([c.strip() for c in copy_input.split(",") if c.strip()]) if copy_input.strip() else ""
+
 elif letter_type == "Exam NOC":
     exam_name = st.text_input("Exam Name")
     year = st.selectbox("NOC Year", [2025, 2024])
