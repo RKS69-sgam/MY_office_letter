@@ -146,10 +146,18 @@ elif letter_type == "Exam NOC":
     exam_name = st.text_input("Exam Name")
     year = st.selectbox("NOC Year", [2025, 2024])
     count = sum((df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year))
+    
     if count >= 4:
         st.warning("Already 4 NOCs taken.")
     else:
-        context["Memo"] = ""
+        application_no = count + 1
+        # Prepare the table content to inject
+        table_html = f"""
+        | PF Number | Employee Name | Designation | NOC Year | Application No. | Exam Name |
+        |-----------|----------------|-------------|----------|------------------|-----------|
+        | {pf} | {hname} | {desg} | {year} | {application_no} | {exam_name} |
+        """
+        context["PFNumber"] = table_html  # Injecting this in place of [PFNumber] placeholder
 
 elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = st.selectbox("Punishment Type", [
