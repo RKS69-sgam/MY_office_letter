@@ -162,11 +162,11 @@ elif letter_type == "General Letter":
         "महामंत्री (WCRMS)"
     ]
     if officer_option == "कनिष्‍ठ अभियंता (रेल पथ)":
-        address_choices = ["", "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
+        address_choices = ["निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
     elif officer_option in beyohari_officers:
-        address_choices = ["", "प.म.रे. ब्‍योहारी", "अन्‍य"]
+        address_choices = ["प.म.रे. ब्‍योहारी", "अन्‍य"]
     elif officer_option in jbp_officers:
-        address_choices = ["", "प.म.रे. जबलपुर", "अन्‍य"]
+        address_choices = ["प.म.रे. जबलपुर", "अन्‍य"]
     else:
         address_choices = ["", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं",
                            "निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
