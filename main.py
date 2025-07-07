@@ -31,17 +31,17 @@ df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) e
 #Replace function for paragraphs and tables
 
 def replace_placeholder_in_para(paragraph, context):
-full_text = ".join(run.text for run in paragraph.runs)
-new_text = full_text
-for key, val in context.items():
-new_text = new_text.replace(f"[{key}]", str(val))
-if new_text != full_text:
-for run in paragraph.runs:
-run.text = ''
-if paragraph.runs:
-paragraph.runs[0].text = new_text
-else:
-paragraph.add_run(new_text)
+    full_text = ''.join(run.text for run in paragraph.runs)
+    new_text = full_text
+    for key, val in context.items():
+        new_text = new_text.replace(f"[{key}]", str(val))
+    if new_text != full_text:
+        for run in paragraph.runs:
+            run.text = ''
+        if paragraph.runs:
+            paragraph.runs[0].text = new_text
+        else:
+            paragraph.add_run(new_text)
 
 def generate_word(template_path, context, filename):
 doc = Document(template_path)
