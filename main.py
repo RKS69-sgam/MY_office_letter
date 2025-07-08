@@ -1,6 +1,3 @@
-# FINAL STREAMLIT LETTER GENERATOR APP WITH ALL FIXES
-
-# FINAL FIXED CODE for General Letter and Exam NOC with full features
 import streamlit as st
 import pandas as pd
 import os
@@ -9,11 +6,8 @@ from docx import Document
 from datetime import date, timedelta
 import datetime
 from docx.shared import Inches
-
-
 # Create output folder
 os.makedirs("generated_letters", exist_ok=True)
-
 # File paths
 template_files = {
     "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
@@ -23,15 +17,12 @@ template_files = {
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
 }
-
 employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
-
 # Placeholder replace in paragraph
-
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
     new_text = full_text
@@ -67,11 +58,9 @@ def generate_word(template_path, context, filename):
                 p = paragraph._element
                 p.getparent().remove(p)
                 p._p = p._element = None
-
                 table = doc.add_table(rows=1, cols=6)
                 table.style = "Table Grid"
                 table.autofit = True
-
                 hdr = table.rows[0].cells
                 hdr[0].text = "PF Number"
                 hdr[1].text = "Employee Name"
@@ -79,7 +68,6 @@ def generate_word(template_path, context, filename):
                 hdr[3].text = "NOC Year"
                 hdr[4].text = "Application No."
                 hdr[5].text = "Exam Name"
-
                 row = table.add_row().cells
                 row[0].text = str(context["PFNumberVal"])
                 row[1].text = context["EmployeeName"]
@@ -88,12 +76,9 @@ def generate_word(template_path, context, filename):
                 row[4].text = str(context["AppNo"])
                 row[5].text = context["ExamName"]
                 break
-
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
     return output_path
-
-
 # === Download Function ===
 def download_word(path):
     with open(path, "rb") as f:
@@ -101,11 +86,9 @@ def download_word(path):
     name = os.path.basename(path)
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">Download Word File</a>'
     st.markdown(href, unsafe_allow_html=True)
-
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
-
 # === Select Employee Logic ===
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
@@ -157,7 +140,6 @@ context = {
     "Reference": "",
     "CopyTo": ""
 }
-
 if letter_type == "Duty Letter (For Absent)":
     mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
     fd = st.date_input("From Date")
@@ -178,7 +160,6 @@ elif letter_type == "General Letter":
         "", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR",
         "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."
     ])
-
     officer_option = st.selectbox("अधिकारी/कर्मचारी", [
         "", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)", "मण्‍डल अभिंयता (पश्चिम)",
         "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)",
@@ -191,8 +172,7 @@ elif letter_type == "General Letter":
     if officer_option == "अन्‍य":
         officer_option = st.text_input("अन्‍य का नाम/पदनाम/एजेंसी का नाम लिखें")
     context["OfficerName"] = officer_option
-
-    # Address dropdown logic based on officer
+# Address dropdown logic based on officer
     beyohari_officers = [
         "सहायक मण्‍डल अभियंता", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)",
         "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "शाखा सचिव (WCRMS)"
@@ -217,37 +197,29 @@ elif letter_type == "General Letter":
     if address_option == "अन्‍य":
         address_option = st.text_input("अन्‍य का पता लिखें")
     context["OfficeAddress"] = address_option
-
     # Subject
     subject_input = st.text_input("विषय")
     context["Subject"] = f"विषय:-    {subject_input}" if subject_input.strip() else ""
-
     # Reference
     ref_input = st.text_input("संदर्भ")
     context["Reference"] = f"संदर्भ:-    {ref_input}" if ref_input.strip() else ""
-
     # Main Memo
     context["Memo"] = st.text_area("मुख्‍य विवरण")
-
     # Copy To
     copy_input = st.text_input("प्रतिलिपि")
     context["CopyTo"] = f"प्रतिलिपि:-    " + "\n".join(
         [c.strip() for c in copy_input.split(",") if c.strip()]
     ) if copy_input.strip() else ""
-
-
 # === Exam NOC UI ===
 elif letter_type == "Exam NOC":
     year = date.today().year
     df_match = df_noc[(df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year)]
     count = df_match.shape[0]
-
     if count >= 4:
         st.warning("यह कर्मचारी इस वर्ष पहले ही 4 NOC ले चुका है।")
     else:
         exam_name = st.text_input("Exam Name", key="exam_name")
         term = st.text_input("Term of NOC", key="noc_term")
-
         context.update({
             "PFNumberVal": pf,
             "EmployeeName": hname,
@@ -258,7 +230,6 @@ elif letter_type == "Exam NOC":
             "Term": term,
             "LetterType": "Exam NOC"
         })
-
 elif letter_type == "SF-11 Punishment Order":
     context["Memo"] = st.selectbox("Punishment Type", [
         "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
@@ -268,39 +239,29 @@ elif letter_type == "SF-11 Punishment Order":
         "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
         "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
     ])
-
 import datetime  # ये सबसे ऊपर या इस block से पहले होना चाहिए
-
 if st.button("Generate Letter"):
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
         duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
         sf11_path = generate_word(template_files["SF-11 For Other Reason"], context, f"SF-11-{hname}.docx")
         download_word(duty_path)
         download_word(sf11_path)
-
     elif letter_type == "General Letter":
         # Get today's date in dd-mm-yyyy format
         today_str = datetime.datetime.now().strftime("%d-%m-%Y")
-
         # Clean filename parts
         filename_part1 = context.get("FileName", "").replace("/", "-").strip()
         filename_part2 = context.get("OfficerName", "").strip()
         filename_part3 = today_str
         filename_part4 = context.get("Subject", "").replace("विषय:-", "").strip()
-
         # Final filename assembly
         final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4}".strip()
         final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
-
         word_path = generate_word(template_files["General Letter"], context, f"{final_name}.docx")
         download_word(word_path)
-
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
-
-
-
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
         new_entry = pd.DataFrame([{ 
             "पी.एफ. क्रमांक": pf,
@@ -312,7 +273,6 @@ if st.button("Generate Letter"):
         }])
         sf11_register = pd.concat([sf11_register, new_entry], ignore_index=True)
         sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-
     if letter_type == "SF-11 Punishment Order":
         mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
         if mask.any():
@@ -322,7 +282,6 @@ if st.button("Generate Letter"):
             sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
         else:
             st.warning("\u26a0\ufe0f चयनित कर्मचारी के लिए पत्र क्र. के आधार पर प्रविष्टि नहीं मिली।")
-
     if letter_type == "Exam NOC" and count < 4:
         new_noc = {
             "PF Number": pf,
