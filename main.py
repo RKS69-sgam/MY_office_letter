@@ -238,7 +238,7 @@ elif letter_type == "General Letter":
 elif letter_type == "Exam NOC":
     df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    selected = st.selectbox("Select Employee", df["Display"].dropna(), key="exam_noc_emp")
     row = df[df["Display"] == selected].iloc[0]
     
     pf = row[1]
@@ -255,8 +255,8 @@ elif letter_type == "Exam NOC":
     if count >= 4:
         st.warning("यह कर्मचारी इस वर्ष पहले ही 4 NOC ले चुका है।")
     else:
-        exam_name = st.text_input("Exam Name")
-        term = st.text_input("Term of NOC")  # You can rename as needed
+        exam_name = st.text_input("Exam Name", key="exam_name")
+        term = st.text_input("Term of NOC", key="noc_term")  # Optional: you can rename label if needed
 
         context.update({
             "PFNumberVal": pf,
@@ -271,7 +271,8 @@ elif letter_type == "Exam NOC":
             "Unit": unit,
             "UnitNumber": unit_full,
             "LetterNo": f"{short}/{unit}/{unit_full}",
-            "LetterDate": date.today().strftime("%d-%m-%Y")
+            "LetterDate": date.today().strftime("%d-%m-%Y"),
+            "LetterType": "Exam NOC"
         })
 
 elif letter_type == "SF-11 Punishment Order":
