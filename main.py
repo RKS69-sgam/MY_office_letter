@@ -239,7 +239,7 @@ elif letter_type == "SF-11 Punishment Order":
         "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
         "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
     ])
-import datetime  # ये सबसे ऊपर या इस block से पहले होना चाहिए
+import datetime  
 if st.button("Generate Letter"):
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
         duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
