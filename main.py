@@ -244,10 +244,6 @@ elif letter_type == "SF-11 Punishment Order":
         "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
         "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
     ])
-    df = sf11_register
-    df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']}", axis=1)
-    selected = st.selectbox("Select Employee", df["Display"].dropna())
-    row = df[df["Display"] == selected].iloc[0]
     patra_kr = row["पत्र क्र."]
     dandadesh_krmank = f"{patra_kr}/D-1"
     context["Dandadesh"] = letter_no
