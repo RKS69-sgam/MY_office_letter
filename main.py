@@ -133,7 +133,7 @@ context = {
     "PFNumber": pf,
     "ShortName": short,
     "Unit": unit,
-    "UnitNumber": unit_full,
+    "UnitNumber": unit,
     "LetterNo": letter_no,
     "DutyDate": "",
     "FromDate": "",
