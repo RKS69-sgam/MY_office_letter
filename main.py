@@ -98,7 +98,7 @@ letter_type = st.selectbox("Select Letter Type", ["",list(template_files.keys())
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
     df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']}", axis=1)
-    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    selected = st.selectbox("Select Employee", ["", df["Display"].dropna()])
     row = df[df["Display"] == selected].iloc[0]
     patra_kr = row["पत्र क्र."]
     dandadesh_krmank = f"{patra_kr}/D-1"
