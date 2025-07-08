@@ -93,7 +93,7 @@ def download_word(path):
     st.markdown(href, unsafe_allow_html=True)
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
-letter_type = st.selectbox("Select Letter Type", ["",list(template_files.keys())])
+letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 # === Select Employee Logic ===
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
