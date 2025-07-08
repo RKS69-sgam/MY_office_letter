@@ -60,34 +60,34 @@ def generate_word(template_path, context, filename):
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
 
-    # Special Case: Exam NOC table
-    if context.get("LetterType") == "Exam NOC":
-        for i, paragraph in enumerate(doc.paragraphs):
-            if "[PFNumber]" in paragraph.text:
-                p = paragraph._element
-                p.getparent().remove(p)
-                p._p = p._element = None
+  # Special Case: Exam NOC table
+if context.get("LetterType") == "Exam NOC":
+    for i, paragraph in enumerate(doc.paragraphs):
+        if "[PFNumber]" in paragraph.text:
+            p = paragraph._element
+            p.getparent().remove(p)
+            p._p = p._element = None
 
-                table = doc.add_table(rows=1, cols=6)
-                table.style = "Table Grid"
-                table.autofit = True
+            table = doc.add_table(rows=1, cols=6)
+            table.style = "Table Grid"
+            table.autofit = True
 
-                hdr = table.rows[0].cells
-                hdr[0].text = "PF Number"
-                hdr[1].text = "Employee Name"
-                hdr[2].text = "Designation"
-                hdr[3].text = "NOC Year"
-                hdr[4].text = "Application No."
-                hdr[5].text = "Exam Name"
+            hdr = table.rows[0].cells
+            hdr[0].text = "PF Number"
+            hdr[1].text = "Employee Name"
+            hdr[2].text = "Designation"
+            hdr[3].text = "NOC Year"
+            hdr[4].text = "Application No."
+            hdr[5].text = "Exam Name"
 
-                row = table.add_row().cells
-                row[0].text = str(context["PFNumberVal"])
-                row[1].text = context["EmployeeName"]
-                row[2].text = context["Designation"]
-                row[3].text = str(context["NOCYear"])
-                row[4].text = str(context["AppNo"])
-                row[5].text = context["ExamName"]
-                break
+            row = table.add_row().cells
+            row[0].text = str(context["PFNumberVal"])
+            row[1].text = context["EmployeeName"]
+            row[2].text = context["Designation"]
+            row[3].text = str(context["NOCYear"])
+            row[4].text = str(context["AppNo"])
+            row[5].text = context["ExamName"]
+            break
 
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
