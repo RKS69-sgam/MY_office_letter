@@ -40,24 +40,27 @@ def replace_placeholder_in_para(paragraph, context):
 def generate_word(template_path, context, filename):
     doc = Document(template_path)
 
-    # Paragraphs
+    # Replace in paragraphs
     for p in doc.paragraphs:
         replace_placeholder_in_para(p, context)
 
-    # Table cells
+    # Replace in table cells
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
 
-    # ✅ Special Case: Exam NOC table (correctly indented inside function)
+    # ✅ Exam NOC Table Insertion
     if context.get("LetterType") == "Exam NOC":
         for i, paragraph in enumerate(doc.paragraphs):
             if "[PFNumber]" in paragraph.text:
+                # Remove placeholder paragraph
                 p = paragraph._element
                 p.getparent().remove(p)
                 p._p = p._element = None
+
+                # Insert table
                 table = doc.add_table(rows=1, cols=6)
                 table.style = "Table Grid"
                 table.autofit = True
@@ -68,6 +71,7 @@ def generate_word(template_path, context, filename):
                 hdr[3].text = "NOC Year"
                 hdr[4].text = "Application No."
                 hdr[5].text = "Exam Name"
+
                 row = table.add_row().cells
                 row[0].text = str(context["PFNumberVal"])
                 row[1].text = context["EmployeeName"]
@@ -76,6 +80,7 @@ def generate_word(template_path, context, filename):
                 row[4].text = str(context["AppNo"])
                 row[5].text = context["ExamName"]
                 break
+
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
     return output_path
