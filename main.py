@@ -106,7 +106,7 @@ if letter_type == "SF-11 Punishment Order":
     hname = row["कर्मचारी का नाम"]
     desg = row.get("पदनाम", "")
     unit_full = patra_kr.split("/")[1]
-    unit = unit_full[:2]
+    unit = unit_full[3:]
     short = patra_kr.split("/")[0]
     letter_no = dandadesh_krmank
 elif letter_type == "General Letter":
