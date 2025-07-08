@@ -100,7 +100,7 @@ def download_word(path):
         b64 = base64.b64encode(f.read()).decode()
     name = os.path.basename(path)
     href = f'<a href="data:application/octet-stream;base64,{b64}" download="{name}">Download Word File</a>'
-    st.markdown(href, unsafe_allow_html=True))
+    st.markdown(href, unsafe_allow_html=True)
 
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
