@@ -123,7 +123,7 @@ else:
     unit_full = str(row[4])
     unit = unit_full[:2]
     short = row[14]
-    letter_no = f"{short}/{unit}/{unit_full}"
+    letter_no = f"{short}/{unit}/{unit}"
 
 letter_date = st.date_input("Letter Date", value=date.today())
 context = {
