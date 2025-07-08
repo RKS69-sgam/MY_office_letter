@@ -115,7 +115,7 @@ elif letter_type == "General Letter":
 else:
     df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    selected = st.selectbox("","Select Employee", df["Display"].dropna())
     row = df[df["Display"] == selected].iloc[0]
     pf = row[1]
     hname = row[13]
