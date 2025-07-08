@@ -93,7 +93,7 @@ def download_word(path):
     st.markdown(href, unsafe_allow_html=True)
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
-letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
+letter_type = st.selectbox("Select Letter Type", ["",list(template_files.keys())])
 # === Select Employee Logic ===
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
@@ -115,7 +115,7 @@ elif letter_type == "General Letter":
 else:
     df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-    selected = st.selectbox("","Select Employee", df["Display"].dropna())
+    selected = st.selectbox("Select Employee", df["Display"].dropna())
     row = df[df["Display"] == selected].iloc[0]
     pf = row[1]
     hname = row[13]
