@@ -21,7 +21,7 @@ template_files = {
 }
 quarter_file = "assets/QUARTER REGISTER.xlsx"
 quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
-employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name="Apr.25")
+employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
