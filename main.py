@@ -240,7 +240,15 @@ elif letter_type == "Exam NOC":
             "LetterType": "Exam NOC"
         })
 elif letter_type == "SF-11 Punishment Order":
-    # 🔽 Editable Memo (Punishment Type)
+    
+
+    # ⏺ Register Data Display + Input
+    st.markdown("#### SF-11 Register से विवरण")
+    st.markdown(f"**आरोप का विवरण:** {row.get('आरोप का विवरण', '—')}")
+    # Editable inputs for register fields
+    pawati_date = st.date_input("पावती का दिनांक", value=date.today())
+    pratyuttar_date = st.date_input("यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक", value=date.today())
+# 🔽 Editable Memo (Punishment Type)
     context["Memo"] = st.selectbox("Punishment Type", [
         "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
         "आगामी देय एक वर्ष की वेतन वृद्धि संचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
@@ -249,20 +257,11 @@ elif letter_type == "SF-11 Punishment Order":
         "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
         "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।"
     ])
-
-    # ⏺ Register Data Display + Input
-    st.markdown("#### SF-11 Register से विवरण")
-    st.markdown(f"**आरोप का विवरण:** {row.get('आरोप का विवरण', '—')}")
-
-    # Editable inputs for register fields
-    pawati_date = st.date_input("पावती का दिनांक", value=date.today())
-    pratyuttar_date = st.date_input("यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक", value=date.today())
-
     # Add to context if needed
     context["Dandadesh"] = letter_no
     context["LetterNo."] = patra_kr
     context["Unit"] = unit
-    context["SF-11Date"] = sf11date.strftime("%d-%m-%Y")
+    context["SF-11Date"] = sf11date
 #==Quarter allotment UI==
 elif letter_type == "Quarter Allotment Letter":
     pf = row[1]
