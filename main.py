@@ -343,11 +343,12 @@ if st.button("Generate Letter"):
     if letter_type == "SF-11 Punishment Order":
         mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
         if mask.any():
-            i = sf11_register[mask].index[0]
+            i =  sf11_register[mask].index[0]
             sf11_register.at[i, "दण्डादेश क्रमांक"] = letter_no
             sf11_register.at[i, "दण्ड का विवरण"] = context["Memo"]
             sf11_register.at[i, "पावती का दिनांक"] = pawati_date.strftime("%d-%m-%Y")
-            sf11_register.at[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = pratyuttar_date.strftime("%d-%m-%Y") sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+            sf11_register.at[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = pratyuttar_date.strftime("%d-%m-%Y") 
+        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
         else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
 
