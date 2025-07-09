@@ -361,7 +361,7 @@ elif letter_type == "Update Employee Database":
 import datetime  
 if letter_type != "Update Employee Database":
     if st.button("Generate Letter"):
-    if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
+        if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
         duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
         sf11_path = generate_word(template_files["SF-11 For Other Reason"], context, f"SF-11-{hname}.docx")
         download_word(duty_path)
