@@ -263,7 +263,7 @@ elif letter_type == "Quarter Allotment Letter":
     unit_full = str(row[4])
     unit = unit_full[:2]
 
-    letter_date = st.date_input("Letter Date", value=date.today())
+    #letter_date = st.date_input("Letter Date", value=date.today())
 
     # Combine Station and Quarter No.
     quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
