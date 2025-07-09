@@ -277,8 +277,9 @@ elif letter_type == "Quarter Allotment Letter":
         "Designation": desg,
         "Unit": unit,
         "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "QuarterNo": qno,
+        "QuarterNo.": qno,
         "Station": station
+        
     }
 
 
