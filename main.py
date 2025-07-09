@@ -108,7 +108,7 @@ if letter_type == "SF-11 Punishment Order":
     pf = row["पी.एफ. क्रमांक"]
     hname = row["कर्मचारी का नाम"]
     desg = row.get("पदनाम", "")
-    unit_full = patra_kr.split("/",2)
+    unit_full = patra_kr.split("/",2)[1]
     unit = unit_full
     short = patra_kr.split("/")[0]
     letter_no = dandadesh_krmank
