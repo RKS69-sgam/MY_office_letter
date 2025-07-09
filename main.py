@@ -359,8 +359,7 @@ elif letter_type == "Update Employee Database":
             st.success("Employee marked as exited.")
 
 import datetime  
-if st.button("Generate Letter"):
-    if letter_type != "Update Employee Database":
+if letter_type != "Update Employee Database":
     if st.button("Generate Letter"):
         # Yahan template processing, placeholder replacement, letter generation, download link etc.
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
