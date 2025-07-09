@@ -349,7 +349,7 @@ if st.button("Generate Letter"):
             sf11_register.at[i, "पावती का दिनांक"] = pawati_date.strftime("%d-%m-%Y")
             sf11_register.at[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = pratyuttar_date.strftime("%d-%m-%Y") 
         sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-        else:
+    else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
 
     # === Exam NOC Register Entry
