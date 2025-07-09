@@ -337,7 +337,7 @@ if st.button("Generate Letter"):
         df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
         df_noc.to_excel(noc_register_path, index=False)
 if letter_type == "Quarter Allotment Letter":
-filename = f"QuarterAllotmentLetter-{hname}.docx"
+    filename = f"QuarterAllotmentLetter-{hname}.docx"
         path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
         download_word(path)
 
