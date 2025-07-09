@@ -253,7 +253,7 @@ elif letter_type == "SF-11 Punishment Order":
     context["Dandadesh"] = letter_no
     context["LetterNo."] = patra_kr
     context["Unit"] = unit
-    Context["SF11Date"] = sf11date
+    context["SF11Date"] = sf11date
 #==Quarter allotment UI==
 elif letter_type == "Quarter Allotment Letter":
     pf = row[1]
