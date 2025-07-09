@@ -361,7 +361,6 @@ elif letter_type == "Update Employee Database":
 import datetime  
 if letter_type != "Update Employee Database":
     if st.button("Generate Letter"):
-        # Yahan template processing, placeholder replacement, letter generation, download link etc.
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
         duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
         sf11_path = generate_word(template_files["SF-11 For Other Reason"], context, f"SF-11-{hname}.docx")
@@ -415,13 +414,13 @@ if letter_type != "Update Employee Database":
     if letter_type == "SF-11 Punishment Order":
         mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
         if mask.any():
-            i =  sf11_register[mask].index[0]
+            i = sf11_register[mask].index[0]
             sf11_register.at[i, "दण्डादेश क्रमांक"] = letter_no
             sf11_register.at[i, "दण्ड का विवरण"] = context["Memo"]
             sf11_register.at[i, "पावती का दिनांक"] = pawati_date.strftime("%d-%m-%Y")
             sf11_register.at[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = pratyuttar_date.strftime("%d-%m-%Y") 
-        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-    else:
+            sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+        else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
 
     # === Exam NOC Register Entry
