@@ -16,7 +16,7 @@ template_files = {
     "General Letter": "assets/General Letter temp.docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
-"Quarter Allotment Letter": "assets/Quarter Allotment temp.docx"
+"Quarter Allotment Letter": "assets/Quarter Allotment temp.docx",
 "Update Employee Database": None
 }
 quarter_file = "assets/QUARTER REGISTER.xlsx"
