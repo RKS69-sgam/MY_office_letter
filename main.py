@@ -112,7 +112,7 @@ if letter_type == "SF-11 Punishment Order":
     unit = unit_full[-7:]
     short = patra_kr.split("/")[0]
     letter_no = dandadesh_krmank
-    sf-11date = row["दिनांक"]
+    sf11date = row["दिनांक"]
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
@@ -253,7 +253,7 @@ elif letter_type == "SF-11 Punishment Order":
     context["Dandadesh"] = letter_no
     context["LetterNo."] = patra_kr
     context["Unit"] = unit
-    Context["SF-11Date"] = sf-11date
+    Context["SF-11Date"] = sf11date
 #==Quarter allotment UI==
 elif letter_type == "Quarter Allotment Letter":
     pf = row[1]
