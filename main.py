@@ -251,20 +251,14 @@ elif letter_type == "SF-11 Punishment Order":
     dandadesh_krmank = f"{patra_kr}/D-1"
     context["Dandadesh"] = letter_no
     context["LetterNo."] = patra_kr
+    context["Unit"] = unit
 #==Quarter allotment UI==
 elif letter_type == "Quarter Allotment Letter":
-   # df = employee_master["Apr.25"]
-    #df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
-    #selected = st.selectbox("Select Employee", df["Display"].dropna())
-    #row = df[df["Display"] == selected].iloc[0]
     pf = row[1]
     hname = row[13]
     desg = row[18]
     unit_full = str(row[4])
     unit = unit_full[:2]
-
-    #letter_date = st.date_input("Letter Date", value=date.today())
-
     # Combine Station and Quarter No.
     quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
     q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
