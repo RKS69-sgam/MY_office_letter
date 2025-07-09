@@ -15,8 +15,11 @@ template_files = {
     "Sick Memo": "assets/SICK MEMO temp..docx",
     "General Letter": "assets/General Letter temp.docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
-    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx"
+    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
+"Quarter Allotment Letter": "assets/Quarter Allotment temp.docx"
 }
+quarter_file = "assets/QUARTER REGISTER.xlsx"
+quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
 employee_master = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
 sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
@@ -248,6 +251,37 @@ elif letter_type == "SF-11 Punishment Order":
     dandadesh_krmank = f"{patra_kr}/D-1"
     context["Dandadesh"] = letter_no
     context["LetterNo."] = patra_kr
+#==Quarter allotment UI==
+elif letter_type == "Quarter Allotment Letter":
+    df = employee_master["Apr.25"]
+    df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
+    selected = st.selectbox("Select Employee", df["Display"].dropna())
+    row = df[df["Display"] == selected].iloc[0]
+    pf = row[1]
+    hname = row[13]
+    desg = row[18]
+    unit_full = str(row[4])
+    unit = unit_full[:2]
+
+    letter_date = st.date_input("Letter Date", value=date.today())
+
+    # Combine Station and Quarter No.
+    quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
+    q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
+    qrow = quarter_df[quarter_df["Display"] == q_selected].iloc[0]
+    station = qrow["STATION"]
+    qno = qrow["QUARTER NO."]
+
+    context = {
+        "EmployeeName": hname,
+        "Designation": desg,
+        "Unit": unit,
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "QuarterNo": qno,
+        "Station": station
+    }
+
+
 import datetime  
 if st.button("Generate Letter"):
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
@@ -302,3 +336,17 @@ if st.button("Generate Letter"):
         }
         df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
         df_noc.to_excel(noc_register_path, index=False)
+if letter_type == "Quarter Allotment Letter":
+filename = f"QuarterAllotmentLetter-{hname}.docx"
+        path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
+        download_word(path)
+
+        # Update Quarter Register
+        i = quarter_df[quarter_df["Display"] == q_selected].index[0]
+        quarter_df.at[i, "PF No."] = pf
+        quarter_df.at[i, "EMPLOYEE NAME"] = hname
+        quarter_df.at[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
+        quarter_df.at[i, "STATUS"] = "OCCUPIED"
+        quarter_df.drop(columns=["Display"], errors="ignore", inplace=True)
+        quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
+        st.success("Letter generated and register updated.")
