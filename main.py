@@ -297,48 +297,83 @@ elif letter_type == "Update Employee Database":
     if 'Remark' not in headers:
         headers.append('Remark')
 
-    st.subheader("Update Employee Database")
-    option = st.radio("Select Action", ["Add New Employee", "Update Existing Employee", "Mark as Exited (Transfer)"])
+    import streamlit as st
+import pandas as pd
+import os
+from datetime import date, datetime
 
-    if option == "Add New Employee":
-        st.subheader("Add New Employee")
-        new_data = {}
-        for col in headers[:-1]:  # 'Remark' छोड़कर
+# Load Employee Master Data
+emp_file = "EMPLOYEE MASTER DATA.xlsx"
+emp_df = pd.read_excel(emp_file)
+headers = list(emp_df.columns)
+
+# Add 'Remark' column if missing
+if 'Remark' not in headers:
+    emp_df['Remark'] = ''
+    headers.append('Remark')
+
+# Define date columns for date input widgets
+date_columns = [
+    "DOB", "DOA", "PRMOTION DATE", "DOR", "LAST PME", "PME DUE",
+    "LAST TRAINING", "TRAINING DUE"
+]
+
+# UI Section
+st.title("Update Employee Database")
+option = st.radio("Select Action", ["Add New Employee", "Update Existing Employee", "Mark as Exited (Transfer)"])
+
+if option == "Add New Employee":
+    st.subheader("Add New Employee")
+    new_data = {}
+    for col in headers[:-1]:
+        if col in date_columns:
+            new_data[col] = st.date_input(col, value=date.today())
+        else:
             new_data[col] = st.text_input(col)
-        if st.button("Add Employee"):
-            new_data['Remark'] = "Added"
-            df_existing = pd.read_excel(emp_file, sheet_name="Apr.25")
-            df_updated = pd.concat([df_existing, pd.DataFrame([new_data])], ignore_index=True)
-            df_updated.to_excel(emp_file, sheet_name="Apr.25", index=False)
-            st.success("Employee added successfully.")
 
-    elif option == "Update Existing Employee":
-        df_existing = pd.read_excel(emp_file, sheet_name="Apr.25")
-        st.subheader("Update Existing Employee")
-        selected_pf = st.selectbox("Select PF Number", df_existing['PF No.'].dropna().unique())
-        row = df_existing[df_existing['PF No.'] == selected_pf].iloc[0]
-        updated_data = {}
-        for col in headers[:-1]:
+    if st.button("Add Employee"):
+        new_data['Remark'] = "Added"
+        emp_df = pd.concat([emp_df, pd.DataFrame([new_data])], ignore_index=True)
+        emp_df.to_excel(emp_file, index=False)
+        row_number = emp_df.shape[0] + 1
+        st.success("Employee added successfully.")
+        st.info(f"Added at row number: {row_number}")
+
+elif option == "Update Existing Employee":
+    st.subheader("Update Existing Employee")
+    selected_pf = st.selectbox("Select PF Number", emp_df['PF No.'].dropna().unique())
+    row = emp_df[emp_df['PF No.'] == selected_pf].iloc[0]
+    updated_data = {}
+    for col in headers[:-1]:
+        if col in date_columns:
+            val = pd.to_datetime(row[col], errors='coerce')
+            updated_data[col] = st.date_input(col, value=val if not pd.isna(val) else date.today())
+        else:
             updated_data[col] = st.text_input(col, value=row[col])
-        if st.button("Update Employee"):
-            index = df_existing[df_existing['PF No.'] == selected_pf].index[0]
-            for col in headers[:-1]:
-                df_existing.at[index, col] = updated_data[col]
-            df_existing.at[index, 'Remark'] = "Updated"
-            df_existing.to_excel(emp_file, sheet_name="Apr.25", index=False)
-            st.success("Employee details updated.")
 
-    elif option == "Mark as Exited (Transfer)":
-        df_existing = pd.read_excel(emp_file, sheet_name="Apr.25")
-        st.subheader("Mark Employee as Exited")
-        selected_pf = st.selectbox("Select PF Number to Exit", df_existing['PF No.'].dropna().unique(), key="exit")
-        exit_date = st.date_input("Exit Date", date.today())
-        if st.button("Mark Exited"):
-            index = df_existing[df_existing['PF No.'] == selected_pf].index[0]
-            df_existing.at[index, 'Posting status'] = 'EXITED'
-            df_existing.at[index, 'Remark'] = f"Transferred/Exited on {exit_date.strftime('%d-%m-%Y')}"
-            df_existing.to_excel(emp_file, sheet_name="Apr.25", index=False)
-            st.success("Employee marked as exited.")
+    if st.button("Update Employee"):
+        index = emp_df[emp_df['PF No.'] == selected_pf].index[0]
+        for col in headers[:-1]:
+            emp_df.at[index, col] = updated_data[col]
+        emp_df.at[index, 'Remark'] = "Updated"
+        emp_df.to_excel(emp_file, index=False)
+        st.success("Employee details updated.")
+        st.info(f"Updated at row number: {index + 2}")
+
+elif option == "Mark as Exited (Transfer)":
+    st.subheader("Mark Employee as Exited")
+    selected_pf = st.selectbox("Select PF Number to Exit", emp_df['PF No.'].dropna().unique(), key="exit")
+    exit_date = st.date_input("Exit Date", date.today())
+    exit_remark = st.text_input("Remark", f"Transferred/Exited on {exit_date.strftime('%d-%m-%Y')}")
+
+    if st.button("Mark Exited"):
+        index = emp_df[emp_df['PF No.'] == selected_pf].index[0]
+        emp_df.at[index, 'Posting status'] = 'EXITED'
+        emp_df.at[index, 'Remark'] = exit_remark
+        emp_df.to_excel(emp_file, index=False)
+        st.success("Employee marked as exited.")
+        st.info(f"Updated at row number: {index + 2}")
+
 
 import datetime  
 if st.button("Generate Letter"):
