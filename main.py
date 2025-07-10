@@ -442,11 +442,7 @@ if st.button("Generate Letter"):
         quarter_df.drop(columns=["Display"], errors="ignore", inplace=True)
         quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
         st.success("Letter generated and register updated.")
-
-    else:
-        word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
-        download_word(word_path)
-
+    
     elif letter_type == "Engine Pass Letter":
         filename = f"EnginePassLetter-{hname}.docx"
         path = generate_word(template_files["Engine Pass Letter"], context, filename)
@@ -463,6 +459,9 @@ if st.button("Generate Letter"):
         filename = f"CardPassLetter-{hname}.docx"
         path = generate_word(template_files["Card Pass Letter"], context, filename)
         download_word(path)
+    else:
+        word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
+        download_word(word_path)
 
         # Update Excel
         i = class_df[class_df["Display"] == selected].index[0]
