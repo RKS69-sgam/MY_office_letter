@@ -124,31 +124,31 @@ if letter_type == "SF-11 Punishment Order":
 elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     class_df = pd.read_excel(class_file, sheet_name="Sheet1")
     class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
-    
     st.subheader(f"{letter_type}")
-    selected_emp = st.selectbox("Select    Employee", class_df["Display"])
-   # letter_date = st.date_input("Letter Date", value=date.today())   # ✅ केवल एक बार
 
-     selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
-     hname = selected_row["Employee Name"]
+    selected_emp = st.selectbox("Select Employee", class_df["Display"])
+    # ❌ REMOVE THIS LINE (Already defined outside)
+    # letter_date = st.date_input("Letter Date", value=date.today())
 
-# ✅ Handle DOR safely
-dor_val = selected_row.get("DOR", "")
-if pd.notnull(dor_val):
-    try:
-        dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
-    except:
+    selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
+    hname = selected_row["Employee Name"]
+
+    dor_val = selected_row.get("DOR", "")
+    if pd.notnull(dor_val):
+        try:
+            dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
+        except:
+            dor_str = ""
+    else:
         dor_str = ""
-else:
-    dor_str = ""
 
-context = {
-    "EmployeeName": hname,
-    "Designation": selected_row.get("Designation", ""),
-    "PFNumber": selected_row.get("PF No.", ""),
-    "DOR": dor_str,
-    #"LetterDate": letter_date.strftime("%d-%m-%Y")
-}
+    context = {
+        "EmployeeName": hname,
+        "Designation": selected_row.get("Designation", ""),
+        "PFNumber": selected_row.get("PF No.", ""),
+        "DOR": dor_str,
+        "LetterDate": letter_date.strftime("%d-%m-%Y")
+    }
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
