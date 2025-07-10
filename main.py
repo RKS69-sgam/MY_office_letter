@@ -16,8 +16,10 @@ template_files = {
     "General Letter": "assets/General Letter temp.docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
-"Quarter Allotment Letter": "assets/Quarter Allotment temp.docx",
-"Update Employee Database": None
+    "Quarter Allotment Letter": "assets/Quarter Allotment temp.docx",
+    "Update Employee Database": None,
+    "Engine Pass Letter": "assests/Engine Pass letter temp.docx",
+    "Card Pass Letter": "assests/Card Pass letter temp.docx"
 }
 quarter_file = "assets/QUARTER REGISTER.xlsx"
 quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
@@ -26,6 +28,8 @@ sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
+class_file = "assests/Class-III (PWIsDetails).xlsx"
+class_df = pd.read_excel(class_file, sheet_name="Sheet1")
 # Placeholder replace in paragraph
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
