@@ -30,6 +30,7 @@ noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
 class_file = "assets/Class-III (PWisDetails).xlsx"
 class_df = pd.read_excel(class_file, sheet_name="Sheet1")
+class_df["Display"] = class_df.apply(lambda r:f"{r['PF No."]} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
 # Placeholder replace in paragraph
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
@@ -291,28 +292,6 @@ elif letter_type == "Quarter Allotment Letter":
         "Station": station
         
     }
-#Engine card pass UI===
-elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-    class_df["Display"] = class_df.apply(lambda r: f"{r['PF Number']} - {r['Employee Name']}", axis=1)
-    selected = st.selectbox("Select Employee", class_df["Display"].dropna())
-    row = class_df[class_df["Display"] == selected].iloc[0]
-
-    pf = row["PF Number"]
-    hname = row["Employee Name"]
-    desg = row["Designation"]
-    dor = row.get("DOR", "")
-
-    letter_date = st.date_input("Letter Date", date.today())
-
-    context = {
-        "PFNumber": pf,
-        "EmployeeName": hname,
-        "Designation": desg,
-        "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "DOR": dor,
-    }
-
-
 #==Add/ Update Employee UI==
 elif letter_type == "Update Employee Database":
     st.subheader("Update Employee Database")
@@ -443,22 +422,7 @@ if st.button("Generate Letter"):
         quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
         st.success("Letter generated and register updated.")
     
-    elif letter_type == "Engine Pass Letter":
-        filename = f"EnginePassLetter-{hname}.docx"
-        path = generate_word(template_files["Engine Pass Letter"], context, filename)
-        download_word(path)
 
-        # Update Excel
-        i = class_df[class_df["Display"] == selected].index[0]
-        class_df.at[i, "Engine Pass Renewal Application Date"] = letter_date.strftime("%d-%m-%Y")
-        class_df.drop(columns=["Display"], inplace=True)
-        class_df.to_excel(class_file, index=False)
-        st.success("Engine Pass Letter generated and register updated.")
-
-    elif letter_type == "Card Pass Letter":
-        filename = f"CardPassLetter-{hname}.docx"
-        path = generate_word(template_files["Card Pass Letter"], context, filename)
-        download_word(path)
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
