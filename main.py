@@ -28,9 +28,9 @@ sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
-class_file = "assets/Class-III (PWisDetails).xlsx"
-class_df = pd.read_excel(class_file, sheet_name="Sheet1")
-class_df["Display"] = class_df.apply(lambda r:f"{r['PF No."]} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
+#class_file = "assets/Class-III (PWisDetails).xlsx"
+#class_df = pd.read_excel(class_file, sheet_name="Sheet1")
+#class_df["Display"] = class_df.apply(lambda r:f"{r['PF No."]} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
 # Placeholder replace in paragraph
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
