@@ -138,7 +138,12 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
         "DOR": pd.to_datetime(selected_row["DOR"]).strftime("%d-%m-%Y"),
         "LetterDate": letter_date.strftime("%d-%m-%Y")
     }
-
+    # ✅ Handle DOR safely
+    dor_val = selected_row["DOR"]
+    if pd.notnull(dor_val):
+    context["DOR"] = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
+    else:
+    context["DOR"] = ""
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
