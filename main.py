@@ -123,27 +123,39 @@ if letter_type == "SF-11 Punishment Order":
 # === Engine Pass / Card Pass Letter ===
 elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     class_df = pd.read_excel(class_file, sheet_name="Sheet1")
-    class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
-    st.subheader(f"{letter_type}")
     
-    selected_emp = st.selectbox("Select Employee", class_df["Display"])
-  #  letter_date = st.date_input("Letter Date", value=date.today())
+    # Display column creation
+    class_df["Display"] = class_df.apply(
+        lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name + 1} - {r['Employee Name']}", axis=1
+    )
     
+    st.subheader(letter_type)
+
+    # Use a unique key to avoid DuplicateElementId error
+    selected_emp = st.selectbox("Select Employee", class_df["Display"], key="emp_select")
+    letter_date = st.date_input("Letter Date", value=date.today(), key="pass_date")
+
+    # Get selected row
     selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
-    
+
+    # Safe DOR formatting
+    dor_val = selected_row.get("DOR", "")
+    if pd.notnull(dor_val):
+        try:
+            dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
+        except:
+            dor_str = ""
+    else:
+        dor_str = ""
+
+    # Prepare context
     context = {
-        "EmployeeName": selected_row["Employee Name"],
-        "Designation": selected_row["Designation"],
-        "PFNumber": selected_row["PF No."],
-        "DOR": pd.to_datetime(selected_row["DOR"]).strftime("%d-%m-%Y"),
+        "EmployeeName": selected_row.get("Employee Name", ""),
+        "Designation": selected_row.get("Designation", ""),
+        "PFNumber": selected_row.get("PF No.", ""),
+        "DOR": dor_str,
         "LetterDate": letter_date.strftime("%d-%m-%Y")
     }
-    # ✅ Handle DOR safely
-    dor_val = selected_row["DOR"]
-    if pd.notnull(dor_val):
-       context["DOR"] = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
-    else:
-       context["DOR"] = ""
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
