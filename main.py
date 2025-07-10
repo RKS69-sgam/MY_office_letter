@@ -503,12 +503,12 @@ if st.button("Generate Letter"):
         class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
         st.success("Register updated.")
 
-  if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-    if letter_type == "Engine Pass Letter":
+    if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+       if letter_type == "Engine Pass Letter":
         template_path = "assets/Engine Pass letter temp.docx"
         save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
         col_to_update = "Engine Pass Renewal Application Date"
-    else:
+       else:
         template_path = "assets/Card Pass letter temp.docx"
         save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
         col_to_update = "Card Pass Renewal Application Date"
