@@ -127,7 +127,7 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     
     st.subheader(f"{letter_type}")
     selected_emp = st.selectbox("Select    Employee", class_df["Display"])
-    letter_date = st.date_input("Letter Date", value=date.today())   # ✅ केवल एक बार
+   # letter_date = st.date_input("Letter Date", value=date.today())   # ✅ केवल एक बार
 
      selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
      hname = selected_row["Employee Name"]
@@ -147,7 +147,7 @@ context = {
     "Designation": selected_row.get("Designation", ""),
     "PFNumber": selected_row.get("PF No.", ""),
     "DOR": dor_str,
-    "LetterDate": letter_date.strftime("%d-%m-%Y")
+    #"LetterDate": letter_date.strftime("%d-%m-%Y")
 }
 elif letter_type == "General Letter":
     df = pd.DataFrame()
