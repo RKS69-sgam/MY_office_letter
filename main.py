@@ -444,19 +444,7 @@ if st.button("Generate Letter"):
         st.success("Letter generated and register updated.")
     
 
-    elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-#template_path = "assets/Engine Pass letter temp.docx"
-            save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Engine Pass Renewal Application Date"
-        else:
-            template_path = "assets/Card Pass letter temp.docx"
-            save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Card Pass Renewal Application Date"
-
-        # Generate letter
-        word_path = generate_word(template_path, context, save_name)
-        st.success("Letter generated successfully.")
-        download_word(word_path)
+    
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
@@ -514,3 +502,17 @@ if st.button("Generate Letter"):
         class_df.drop(columns=["Display"], inplace=True, errors="ignore")
         class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
         st.success("Register updated.")
+
+    if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+    template_path = "assets/Engine Pass letter temp.docx"
+            save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
+            col_to_update = "Engine Pass Renewal Application Date"
+    else:
+            template_path = "assets/Card Pass letter temp.docx"
+            save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
+            col_to_update = "Card Pass Renewal Application Date"
+
+        # Generate letter
+        word_path =      generate_word(template_path, context, save_name)
+        st.success("Letter generated successfully.")
+        download_word(word_path)
