@@ -123,22 +123,17 @@ if letter_type == "SF-11 Punishment Order":
 # === Engine Pass / Card Pass Letter ===
 elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     class_df = pd.read_excel(class_file, sheet_name="Sheet1")
-    
-    # Display column creation
-    class_df["Display"] = class_df.apply(
-        lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name + 1} - {r['Employee Name']}", axis=1
-    )
+    class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
     
     st.subheader(letter_type)
+    selected_emp = st.selectbox("Select Employee", class_df["Display"])
 
-    # Use a unique key to avoid DuplicateElementId error
-    selected_emp = st.selectbox("Select Employee", class_df["Display"], key="emp_select")
-    letter_date = st.date_input("Letter Date", value=date.today(), key="pass_date")
+    # ✅ "Letter Date" input only here
+    letter_date = st.date_input("Letter Date", value=date.today(), key="pass_letter_date")
 
-    # Get selected row
     selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
+    hname = selected_row["Employee Name"]
 
-    # Safe DOR formatting
     dor_val = selected_row.get("DOR", "")
     if pd.notnull(dor_val):
         try:
@@ -148,9 +143,8 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     else:
         dor_str = ""
 
-    # Prepare context
     context = {
-        "EmployeeName": selected_row.get("Employee Name", ""),
+        "EmployeeName": hname,
         "Designation": selected_row.get("Designation", ""),
         "PFNumber": selected_row.get("PF No.", ""),
         "DOR": dor_str,
