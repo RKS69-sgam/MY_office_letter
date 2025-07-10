@@ -382,15 +382,25 @@ if st.button("Generate Letter"):
         download_word(sf11_path)
 
     elif letter_type == "General Letter":
-        today_str = datetime.datetime.now().strftime("%d-%m-%Y")
-        filename_part1 = context.get("FileName", "").replace("/", "-").strip()
-        filename_part2 = context.get("OfficerName", "").strip()
-        filename_part3 = today_str
-        filename_part4 = context.get("Subject", "").replace("विषय:-", "").strip()
-        final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4}".strip()
-        final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
-        word_path = generate_word(template_files["General Letter"], context, f"{final_name}.docx")
-        download_word(word_path)
+    today_str = datetime.datetime.now().strftime("%d-%m-%Y")
+    filename_part1 = context.get("FileName", "").replace("/", "-").strip()
+    filename_part2 = context.get("OfficerName", "").strip()
+    filename_part3 = today_str
+    filename_part4 = context.get("Subject", "").replace("विषय:-", "").strip()
+
+    # Remove invalid filename characters
+    for ch in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+        filename_part1 = filename_part1.replace(ch, '')
+        filename_part2 = filename_part2.replace(ch, '')
+        filename_part3 = filename_part3.replace(ch, '')
+        filename_part4 = filename_part4.replace(ch, '')
+
+    final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4}".strip()
+    final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
+
+    # Generate and download
+    word_path = generate_word(template_files["General Letter"], context, f"{final_name}.docx")
+    download_word(word_path)
 
     elif letter_type == "Quarter Allotment Letter":
         filename = f"QuarterAllotmentLetter-{hname}.docx"
