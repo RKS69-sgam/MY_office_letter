@@ -445,7 +445,7 @@ if st.button("Generate Letter"):
     
 
     elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-template_path = "assets/Engine Pass letter temp.docx"
+#template_path = "assets/Engine Pass letter temp.docx"
             save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
             col_to_update = "Engine Pass Renewal Application Date"
         else:
