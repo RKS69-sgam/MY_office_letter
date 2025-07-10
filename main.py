@@ -291,6 +291,28 @@ elif letter_type == "Quarter Allotment Letter":
         "Station": station
         
     }
+#Engine card pass UI===
+elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+    class_df["Display"] = class_df.apply(lambda r: f"{r['PF Number']} - {r['Employee Name']}", axis=1)
+    selected = st.selectbox("Select Employee", class_df["Display"].dropna())
+    row = class_df[class_df["Display"] == selected].iloc[0]
+
+    pf = row["PF Number"]
+    hname = row["Employee Name"]
+    desg = row["Designation"]
+    dor = row.get("DOR", "")
+
+    letter_date = st.date_input("Letter Date", date.today())
+
+    context = {
+        "PFNumber": pf,
+        "EmployeeName": hname,
+        "Designation": desg,
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "DOR": dor,
+    }
+
+
 #==Add/ Update Employee UI==
 elif letter_type == "Update Employee Database":
     st.subheader("Update Employee Database")
@@ -376,7 +398,7 @@ elif letter_type == "Update Employee Database":
                     df.to_excel(writer, sheet_name=sheet, index=False)
             st.success(f"Employee marked exited at row {index + 1}.")
 
-
+#Generate letter command==
 import datetime  
 if st.button("Generate Letter"):
     if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
@@ -424,6 +446,31 @@ if st.button("Generate Letter"):
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
+
+    elif letter_type == "Engine Pass Letter":
+        filename = f"EnginePassLetter-{hname}.docx"
+        path = generate_word(template_files["Engine Pass Letter"], context, filename)
+        download_word(path)
+
+        # Update Excel
+        i = class_df[class_df["Display"] == selected].index[0]
+        class_df.at[i, "Engine Pass Renewal Application Date"] = letter_date.strftime("%d-%m-%Y")
+        class_df.drop(columns=["Display"], inplace=True)
+        class_df.to_excel(class_file, index=False)
+        st.success("Engine Pass Letter generated and register updated.")
+
+    elif letter_type == "Card Pass Letter":
+        filename = f"CardPassLetter-{hname}.docx"
+        path = generate_word(template_files["Card Pass Letter"], context, filename)
+        download_word(path)
+
+        # Update Excel
+        i = class_df[class_df["Display"] == selected].index[0]
+        class_df.at[i, "Card Pass Renewal Application Date"] = letter_date.strftime("%d-%m-%Y")
+        class_df.drop(columns=["Display"], inplace=True)
+        class_df.to_excel(class_file, index=False)
+        st.success("Card Pass Letter generated and register updated.")
+
 
     # === SF-11 Register Entry (For Other Reason or Duty Letter)
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
