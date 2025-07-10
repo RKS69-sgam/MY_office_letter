@@ -389,7 +389,7 @@ if st.button("Generate Letter"):
         filename_part4 = context.get("Subject", "").replace("विषय:-", "").strip()
 
        # Remove invalid filename characters
-        for ch in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+    for ch in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
         filename_part1 = filename_part1.replace(ch, '')
         filename_part2 = filename_part2.replace(ch, '')
         filename_part3 = filename_part3.replace(ch, '')
