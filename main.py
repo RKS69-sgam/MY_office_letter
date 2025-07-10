@@ -127,7 +127,7 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     st.subheader(f"{letter_type}")
     
     selected_emp = st.selectbox("Select Employee", class_df["Display"])
-    letter_date = st.date_input("Letter Date", value=date.today())
+  #  letter_date = st.date_input("Letter Date", value=date.today())
     
     selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
     
