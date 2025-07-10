@@ -395,7 +395,7 @@ if st.button("Generate Letter"):
         filename_part3 = filename_part3.replace(ch, '')
         filename_part4 = filename_part4.replace(ch, '')
 
-      final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4}".strip()
+      final_name = f"{filename_part1} - {filename_part2} - {filename_part3} - {filename_part4[:10]}".strip()
       final_name = final_name.replace("  ", " ").replace(" -  -", "").strip()
 
     # Generate and download
