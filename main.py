@@ -382,7 +382,7 @@ if st.button("Generate Letter"):
         download_word(sf11_path)
 
     elif letter_type == "General Letter":
-    today_str = datetime.datetime.now().strftime("%d-%m-%Y")
+    #today_str = datetime.datetime.now().strftime("%d-%m-%Y")
     filename_part1 = context.get("FileName", "").replace("/", "-").strip()
     filename_part2 = context.get("OfficerName", "").strip()
     filename_part3 = today_str
