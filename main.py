@@ -30,8 +30,6 @@ sf11_register_path = "assets/SF-11 Register.xlsx"
 sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
 noc_register_path = "assets/Exam NOC_Report.xlsx"
 df_noc = pd.read_excel(noc_register_path) if os.path.exists(noc_register_path) else pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
-# Load Class-III Data for Engine Pass and Card Pass Letters
-class_file = "assets/Class-III (PWisDetails).xlsx"
 
 # Placeholder replace in paragraph
 def replace_placeholder_in_para(paragraph, context):
