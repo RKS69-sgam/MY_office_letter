@@ -1,45 +1,62 @@
-# engine_card_pass.py
+import os
+from docx import Document
 
-import pandas as pd
-from datetime import date
-import streamlit as st
-from generate_word import generate_word, download_word  # Adjust as per your codebase
-
-def handle_engine_card_pass(letter_type):
-    class_file = "Class-III (PWisDetails).xlsx"
-    class_df = pd.read_excel(class_file, sheet_name="Sheet1")
-    class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
-
-    st.subheader(f"{letter_type}")
-    selected_emp = st.selectbox("Select Employee", class_df["Display"])
-    letter_date = st.date_input("Letter Date", value=date.today(), key=letter_type)
-
-    selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
-
-    context = {
-        "EmployeeName": selected_row["Employee Name"],
-        "Designation": selected_row["Designation"],
-        "PFNumber": selected_row["PF No."],
-        "DOR": pd.to_datetime(selected_row["DOR"]).strftime("%d-%m-%Y") if pd.notnull(selected_row["DOR"]) else "",
-        "LetterDate": letter_date
-    }
-
-    if st.button("Generate Letter"):
-        if letter_type == "Engine Pass Letter":
-            template_path = "assets/Engine Pass letter temp.docx"
-            save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Engine Pass Renewal Application Date"
+def replace_placeholder_in_para(paragraph, context):
+    full_text = ''.join(run.text for run in paragraph.runs)
+    new_text = full_text
+    for key, val in context.items():
+        new_text = new_text.replace(f"[{key}]", str(val))
+    if new_text != full_text:
+        for run in paragraph.runs:
+            run.text = ''
+        if paragraph.runs:
+            paragraph.runs[0].text = new_text
         else:
-            template_path = "assets/Card Pass letter temp.docx"
-            save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Card Pass Renewal Application Date"
+            paragraph.add_run(new_text)
 
-        word_path = generate_word(template_path, context, save_name)
-        download_word(word_path)
-        st.success("Letter generated successfully.")
+def generate_word(template_path, context, filename):
+    doc = Document(template_path)
 
-        row_index = class_df[class_df["Display"] == selected_emp].index[0]
-        class_df.at[row_index, col_to_update] = letter_date.strftime("%d-%m-%Y")
-        class_df.drop(columns=["Display"], inplace=True, errors="ignore")
-        class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
-        st.success("Register updated.")
+    # Replace placeholders in paragraphs
+    for p in doc.paragraphs:
+        replace_placeholder_in_para(p, context)
+
+    # Replace placeholders in table cells
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    replace_placeholder_in_para(p, context)
+
+    # Special Case: Insert table for Exam NOC under [PFNumber]
+    if context.get("LetterType") == "Exam NOC":
+        for i, paragraph in enumerate(doc.paragraphs):
+            if "[PFNumber]" in paragraph.text:
+                p = paragraph._element
+                p.getparent().remove(p)
+                p._p = p._element = None
+
+                table = doc.add_table(rows=1, cols=6)
+                table.style = "Table Grid"
+                hdr = table.rows[0].cells
+                hdr[0].text = "PF Number"
+                hdr[1].text = "Employee Name"
+                hdr[2].text = "Designation"
+                hdr[3].text = "NOC Year"
+                hdr[4].text = "Application No."
+                hdr[5].text = "Exam Name"
+
+                row = table.add_row().cells
+                row[0].text = str(context["PFNumberVal"])
+                row[1].text = context["EmployeeName"]
+                row[2].text = context["Designation"]
+                row[3].text = str(context["NOCYear"])
+                row[4].text = str(context["AppNo"])
+                row[5].text = context["ExamName"]
+                break
+
+    # Save generated file
+    output_path = os.path.join("generated_letters", filename)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    doc.save(output_path)
+    return output_path
