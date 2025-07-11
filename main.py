@@ -107,7 +107,7 @@ st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 # === Select Employee Logic ===
-
+if letter_type in ["Engine Pass Letter", "Card Pass Letter"]: handle_engine_card_pass(letter_type)
 
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
@@ -126,7 +126,7 @@ if letter_type == "SF-11 Punishment Order":
     sf11date = row["दिनांक"]
     letter_date = st.date_input("Letter Date", value=date.today())
 
-elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]: handle_engine_card_pass(letter_type)
+
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
