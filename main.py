@@ -147,7 +147,7 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
         "Designation": selected_row.get("Designation", ""),
         "PFNumber": selected_row.get("PF No.", ""),
         "DOR": dor_str,
-        "LetterDate": letter_date #.strftime("%d-%m-%Y")
+        #"LetterDate": letter_date.strftime("%d-%m-%Y")
     }
 elif letter_type == "General Letter":
     df = pd.DataFrame()
