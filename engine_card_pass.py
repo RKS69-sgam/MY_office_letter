@@ -6,7 +6,7 @@ import streamlit as st
 from generate_word import generate_word, download_word  # Adjust as per your codebase
 
 def handle_engine_card_pass(letter_type):
-    class_file = "Class-III (PWisDetails).xlsx"
+    class_file = "assets/Class-III (PWisDetails).xlsx"
     class_df = pd.read_excel(class_file, sheet_name="Sheet1")
     class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
 
