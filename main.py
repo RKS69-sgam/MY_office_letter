@@ -455,7 +455,7 @@ if st.button("Generate Letter"):
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
 
-    elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+    if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
         if letter_type == "Engine Pass Letter":
             template_path = "assets/Engine Pass letter temp.docx"
             save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
