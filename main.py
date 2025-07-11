@@ -443,9 +443,6 @@ if st.button("Generate Letter"):
         quarter_df.drop(columns=["Display"], errors="ignore", inplace=True)
         quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
         st.success("Letter generated and register updated.")
-    
-
-    
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
@@ -470,21 +467,7 @@ if st.button("Generate Letter"):
         class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
         st.success("Register updated.")
 
-    else:
-        word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
-        download_word(word_path)
-
-        i = class_df[class_df["Display"] == selected].index[0]
-        class_df.at[i, "Card Pass Renewal Application Date"] = letter_date.strftime("%d-%m-%Y")
-        class_df.drop(columns=["Display"], inplace=True)
-        class_df.to_excel(class_file, index=False)
-        st.success("Card Pass Letter generated and register updated.")
-        # Update Excel
-        i = class_df[class_df["Display"] == selected].index[0]
-        class_df.at[i, "Card Pass Renewal Application Date"] = letter_date.strftime("%d-%m-%Y")
-        class_df.drop(columns=["Display"], inplace=True)
-        class_df.to_excel(class_file, index=False)
-        st.success("Card Pass Letter generated and register updated.")
+    
 
 
     # === SF-11 Register Entry (For Other Reason or Duty Letter)
