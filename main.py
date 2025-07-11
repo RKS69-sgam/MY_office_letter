@@ -6,6 +6,8 @@ from docx import Document
 from datetime import date, timedelta
 import datetime
 from docx.shared import Inches
+from engine_card_pass import handle_engine_card_pass
+
 # Create output folder
 os.makedirs("generated_letters", exist_ok=True)
 # File paths
@@ -123,27 +125,8 @@ if letter_type == "SF-11 Punishment Order":
     letter_no = dandadesh_krmank
     sf11date = row["दिनांक"]
     letter_date = st.date_input("Letter Date", value=date.today())
-elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-    if letter_type == "Engine Pass Letter":
-        template_path = "assets/Engine Pass letter temp.docx"
-        save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
-        col_to_update = "Engine Pass Renewal Application Date"
-    else:
-        template_path = "assets/Card Pass letter temp.docx"
-        save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
-        col_to_update = "Card Pass Renewal Application Date"
 
-    word_path = generate_word(template_path, context, save_name)
-    st.success("Letter generated successfully.")
-    download_word(word_path)
-
-    row_index = class_df[class_df["Display"] == selected_emp].index[0]
-    class_df.at[row_index, col_to_update] = letter_date.strftime("%d-%m-%Y")
-    class_df.drop(columns=["Display"], inplace=True, errors="ignore")
-    class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
-    st.success("Register updated.")
-
-
+elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]: handle_engine_card_pass(letter_type)
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
@@ -454,26 +437,6 @@ if st.button("Generate Letter"):
     else:
         word_path = generate_word(template_files[letter_type], context, f"{letter_type.replace('/', '-')}-{hname}.docx")
         download_word(word_path)
-
-    if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-        if letter_type == "Engine Pass Letter":
-            template_path = "assets/Engine Pass letter temp.docx"
-            save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Engine Pass Renewal Application Date"
-        else:
-            template_path = "assets/Card Pass letter temp.docx"
-            save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
-            col_to_update = "Card Pass Renewal Application Date"
-
-        word_path = generate_word(template_path, context, save_name)
-        st.success("Letter generated successfully.")
-        download_word(word_path)
-
-        row_index = class_df[class_df["Display"] == selected_emp].index[0]
-        class_df.at[row_index, col_to_update] = letter_date.strftime("%d-%m-%Y")
-        class_df.drop(columns=["Display"], inplace=True, errors="ignore")
-        class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
-        st.success("Register updated.")
 
     
 
