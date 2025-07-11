@@ -105,6 +105,7 @@ st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 # === Select Employee Logic ===
+
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
     df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']} - {r['दिनांक']}", axis=1)
@@ -115,44 +116,31 @@ if letter_type == "SF-11 Punishment Order":
     pf = row["पी.एफ. क्रमांक"]
     hname = row["कर्मचारी का नाम"]
     desg = row.get("पदनाम", "")
-    unit_full = patra_kr.split("/",1)[1]
+    unit_full = patra_kr.split("/", 1)[1]
     unit = unit_full[-7:]
     short = patra_kr.split("/")[0]
     letter_no = dandadesh_krmank
     sf11date = row["दिनांक"]
-# === Engine Pass / Card Pass Letter ===
+    letter_date = st.date_input("Letter Date", value=date.today())
+
 elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     class_df = pd.read_excel(class_file, sheet_name="Sheet1")
     class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
     st.subheader(f"{letter_type}")
+    selected = st.selectbox("Select Employee", class_df["Display"].dropna())
+    row = class_df[class_df["Display"] == selected].iloc[0]
+    hname = row["Employee Name"]
+    desg = row["Designation"]
+    pf = row["PF No."]
+    dor_val = row.get("DOR", "")
+    dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y") if pd.notnull(dor_val) else ""
+    letter_date = st.date_input("Letter Date", value=date.today())
 
-    selected_emp = st.selectbox("Select Employee", class_df["Display"])
-letter_date = st.date_input("Letter Date", value=date.today())
-
-selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
-hname = selected_row["Employee Name"]
-desg = selected_row["Designation"]
-
-# Handle DOR safely
-dor_val = selected_row.get("DOR", "")
-if pd.notnull(dor_val):
-    try:
-        dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
-    except:
-        dor_str = ""
-else:
-    dor_str = ""
-
-context = {
-    "EmployeeName": hname,
-    "Designation": desg,
-    "PFNumber": selected_row.get("PF No.", ""),
-    "DOR": dor_str,
-   # "LetterDate": letter_date.strftime("%d-%m-%Y")
-}
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
+    letter_date = st.date_input("Letter Date", value=date.today())
+
 else:
     df = employee_master["Apr.25"]
     df["Display"] = df.apply(lambda r: f"{r[1]} - {r[2]} - {r[4]} - {r[5]}", axis=1)
@@ -165,8 +153,9 @@ else:
     unit = unit_full[:2]
     short = row[14]
     letter_no = f"{short}/{unit}/{unit}"
+    letter_date = st.date_input("Letter Date", value=date.today())
 
-letter_date = st.date_input("Letter Date", value=date.today())
+# === Common context for template replacement ===
 context = {
     "LetterDate": letter_date.strftime("%d-%m-%Y"),
     "EmployeeName": hname,
@@ -184,7 +173,8 @@ context = {
     "OfficerUnit": "",
     "Subject": "",
     "Reference": "",
-    "CopyTo": ""
+    "CopyTo": "",
+    "DOR": dor_str if letter_type in ["Engine Pass Letter", "Card Pass Letter"] else ""
 }
 if letter_type == "Duty Letter (For Absent)":
     mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
