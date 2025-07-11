@@ -106,6 +106,29 @@ letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 # === Select Employee Logic ===
 
+if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+    class_df = pd.read_excel(class_file, sheet_name="Sheet1")
+    class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
+    st.subheader(letter_type)
+    
+    selected_emp = st.selectbox("Select Employee", class_df["Display"])
+    letter_date = st.date_input("Letter Date", key="engine_card_letter_date")
+
+    selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
+
+    context = {
+        "EmployeeName": selected_row["Employee Name"],
+        "Designation": selected_row["Designation"],
+        "PFNumber": selected_row["PF No."],
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+        "DOR": ""
+    }
+
+    dor_val = selected_row["DOR"]
+    if pd.notnull(dor_val):
+        context["DOR"] = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
+
+
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
     df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']} - {r['दिनांक']}", axis=1)
@@ -123,18 +146,7 @@ if letter_type == "SF-11 Punishment Order":
     sf11date = row["दिनांक"]
     letter_date = st.date_input("Letter Date", value=date.today())
 
-elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-    class_df = pd.read_excel(class_file, sheet_name="Sheet1")
-    class_df["Display"] = class_df.apply(lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1)
-    st.subheader(f"{letter_type}")
-    selected = st.selectbox("Select Employee", class_df["Display"].dropna())
-    row = class_df[class_df["Display"] == selected].iloc[0]
-    hname = row["Employee Name"]
-    desg = row["Designation"]
-    pf = row["PF No."]
-    dor_val = row.get("DOR", "")
-    dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y") if pd.notnull(dor_val) else ""
-    letter_date = st.date_input("Letter Date", value=date.today())
+
 
 elif letter_type == "General Letter":
     df = pd.DataFrame()
