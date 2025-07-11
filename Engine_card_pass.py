@@ -1,123 +1,96 @@
 import streamlit as st
 import pandas as pd
-from datetime import date
-from docx import Document
-from io import BytesIO
-from tempfile import NamedTemporaryFile
-import base64
+import datetime
 import os
+from docx import Document
 
-# Load Employee Data
-@st.cache_data
-def load_employee_data():
-    df = pd.read_excel("assets/EMPLOYEE MASTER DATA.xlsx", sheet_name=None)
-    return df
+# === Utility Function ===
+def generate_word(template_path, context, filename):
+    doc = Document(template_path)
 
-def replace_placeholders(doc, context):
-    # Replace in paragraphs
-    for p in doc.paragraphs:
+    def replace_placeholder_in_para(paragraph, context):
+        full_text = ''.join(run.text for run in paragraph.runs)
+        new_text = full_text
         for key, val in context.items():
-            if f"[{key}]" in p.text:
-                p.text = p.text.replace(f"[{key}]", str(val))
-    # Replace in tables
+            new_text = new_text.replace(f"[{key}]", str(val))
+        if new_text != full_text:
+            for run in paragraph.runs:
+                run.text = ''
+            if paragraph.runs:
+                paragraph.runs[0].text = new_text
+            else:
+                paragraph.add_run(new_text)
+
+    for p in doc.paragraphs:
+        replace_placeholder_in_para(p, context)
+
     for table in doc.tables:
         for row in table.rows:
             for cell in row.cells:
-                for key, val in context.items():
-                    if f"[{key}]" in cell.text:
-                        cell.text = cell.text.replace(f"[{key}]", str(val))
+                for p in cell.paragraphs:
+                    replace_placeholder_in_para(p, context)
 
-def generate_docx(template_path, context):
-    doc = Document(template_path)
-    replace_placeholders(doc, context)
-    temp_file = NamedTemporaryFile(delete=False, suffix=".docx")
-    doc.save(temp_file.name)
-    return temp_file.name
+    output_path = os.path.join("generated_letters", filename)
+    os.makedirs("generated_letters", exist_ok=True)
+    doc.save(output_path)
+    return output_path
 
-def convert_to_pdf(docx_path):
-    try:
-        from docx2pdf import convert
-        pdf_path = docx_path.replace(".docx", ".pdf")
-        convert(docx_path, pdf_path)
-        return pdf_path
-    except:
-        return None
+def download_word(path):
+    with open(path, "rb") as f:
+        st.download_button(
+            label="Download Letter",
+            data=f,
+            file_name=os.path.basename(path),
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
-def download_button(file_path, label):
-    with open(file_path, "rb") as f:
-        data = f.read()
-        b64 = base64.b64encode(data).decode()
-        href = f'<a href="data:application/octet-stream;base64,{b64}" download="{os.path.basename(file_path)}">{label}</a>'
-        st.markdown(href, unsafe_allow_html=True)
+# === Load Data ===
+class_file = "assets/CLASS-III EMPLOYEES.xlsx"
+class_df = pd.read_excel(class_file, sheet_name="Sheet1")
+class_df["Display"] = class_df.apply(
+    lambda r: f"{r['PF No.']} - {r['HRMS ID']} - {r.name+1} - {r['Employee Name']}", axis=1
+)
 
-data = load_employee_data()
-sheet_names = list(data.keys())
-selected_sheet = st.selectbox("Select Unit Sheet:", sheet_names)
-df = data[selected_sheet]
+# === Streamlit UI ===
+st.title("OFFICE OF THE SSE/PW/SGAM")
+letter_type = st.selectbox("Select Letter Type", ["Engine Pass Letter", "Card Pass Letter"])
 
-# Safe column mapping
-col_pf = 1
-col_unit = 3
-col_empname = 4
-col_shortname = 14
-col_designation = 17
+if letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+    st.subheader(letter_type)
+    selected_emp = st.selectbox("Select Employee", class_df["Display"])
+    letter_date = st.date_input("Letter Date", value=datetime.date.today())
 
-# Employee Selection
-employee_names = df.iloc[:, col_empname].dropna().tolist()
-selected_emp = st.selectbox("Select Employee:", employee_names)
-selected_row = df[df.iloc[:, col_empname] == selected_emp].iloc[0]
+    selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
 
-# Letter Type
-letter_type = st.selectbox("Select Letter Type:", [
-    "SF-11 Punishment Order",
-    "Duty Letter (For Absent)",
-    "Sick Memo",
-    "Exam NOC"
-])
+    context = {
+        "EmployeeName": selected_row["Employee Name"],
+        "Designation": selected_row["Designation"],
+        "PFNumber": selected_row["PF No."],
+        "LetterDate": letter_date.strftime("%d-%m-%Y"),
+    }
 
-# Date Input
-letter_date = st.date_input("Select Letter Date", date.today())
-
-# Additional Fields
-from_date = st.date_input("From Date") if "Duty" in letter_type else None
-to_date = st.date_input("To Date") if "Duty" in letter_type else None
-duty_date = st.date_input("Join Duty Date") if "Duty" in letter_type else None
-memo_text = st.text_area("Memo Text") if "SF-11" in letter_type else ""
-exam_name = st.text_input("Exam Name") if "NOC" in letter_type else ""
-noc_count = st.selectbox("NOC Attempt No", [1, 2, 3, 4]) if "NOC" in letter_type else None
-
-# Context dictionary
-context = {
-    "LetterDate": letter_date.strftime("%d-%m-%Y"),
-    "EmployeeName": selected_emp,
-    "Designation": selected_row[col_designation] if len(selected_row) > col_designation else "",
-    "UnitNumber": selected_row[col_unit] if len(selected_row) > col_unit else "",
-    "FromDate": from_date.strftime("%d-%m-%Y") if from_date else "",
-    "ToDate": to_date.strftime("%d-%m-%Y") if to_date else "",
-    "DutyDate": duty_date.strftime("%d-%m-%Y") if duty_date else "",
-    "MEMO": memo_text,
-    "PFNumber": selected_row[col_pf] if len(selected_row) > col_pf else "",
-    "ExamName": exam_name,
-    "NOCCount": noc_count
-}
-
-# Template Mapping
-template_files = {
-    "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
-    "Duty Letter (For Absent)": "assets/Absent Duty letter temp.docx",
-    "Sick Memo": "assets/SICK MEMO temp..docx",
-    "Exam NOC": "assets/Exam NOC Letter temp.docx"
-}
-
-# Submit Button
-if st.button("Generate Letter"):
-    docx_path = generate_docx(template_files[letter_type], context)
-    st.success("Word letter generated successfully.")
-    download_button(docx_path, "⬇️ Download Word Letter")
-
-    pdf_path = convert_to_pdf(docx_path)
-    if pdf_path and os.path.exists(pdf_path):
-        st.success("PDF letter generated successfully.")
-        download_button(pdf_path, "⬇️ Download PDF Letter")
+    dor_val = selected_row.get("DOR", None)
+    if pd.notnull(dor_val):
+        context["DOR"] = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
     else:
-        st.warning("PDF conversion not supported on this platform.")
+        context["DOR"] = ""
+
+    if st.button("Generate Letter"):
+        if letter_type == "Engine Pass Letter":
+            template_path = "assets/Engine Pass letter temp.docx"
+            save_name = f"EnginePass-{context['EmployeeName'].strip()}.docx"
+            col_to_update = "Engine Pass Renewal Application Date"
+        else:
+            template_path = "assets/Card Pass letter temp.docx"
+            save_name = f"CardPass-{context['EmployeeName'].strip()}.docx"
+            col_to_update = "Card Pass Renewal Application Date"
+
+        word_path = generate_word(template_path, context, save_name)
+        st.success("Letter generated successfully.")
+        download_word(word_path)
+
+        row_index = class_df[class_df["Display"] == selected_emp].index[0]
+        class_df.at[row_index, col_to_update] = letter_date.strftime("%d-%m-%Y")
+        class_df.drop(columns=["Display"], inplace=True, errors="ignore")
+        class_df.to_excel(class_file, sheet_name="Sheet1", index=False)
+        st.success("Register updated.")
