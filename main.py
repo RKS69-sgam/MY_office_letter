@@ -127,28 +127,29 @@ elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
     st.subheader(f"{letter_type}")
 
     selected_emp = st.selectbox("Select Employee", class_df["Display"])
-    # ❌ REMOVE THIS LINE (Already defined outside)
-    # letter_date = st.date_input("Letter Date", value=date.today())
+letter_date = st.date_input("Letter Date", value=date.today())
 
-    selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
-    hname = selected_row["Employee Name"]
+selected_row = class_df[class_df["Display"] == selected_emp].iloc[0]
+hname = selected_row["Employee Name"]
+desg = selected_row["Designation"]
 
-    dor_val = selected_row.get("DOR", "")
-    if pd.notnull(dor_val):
-        try:
-            dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
-        except:
-            dor_str = ""
-    else:
+# Handle DOR safely
+dor_val = selected_row.get("DOR", "")
+if pd.notnull(dor_val):
+    try:
+        dor_str = pd.to_datetime(dor_val).strftime("%d-%m-%Y")
+    except:
         dor_str = ""
+else:
+    dor_str = ""
 
-    context = {
-        "EmployeeName": hname,
-        "Designation": selected_row.get("Designation", ""),
-        "PFNumber": selected_row.get("PF No.", ""),
-        "DOR": dor_str,
-        #"LetterDate": letter_date.strftime("%d-%m-%Y")
-    }
+context = {
+    "EmployeeName": hname,
+    "Designation": desg,
+    "PFNumber": selected_row.get("PF No.", ""),
+    "DOR": dor_str,
+   # "LetterDate": letter_date.strftime("%d-%m-%Y")
+}
 elif letter_type == "General Letter":
     df = pd.DataFrame()
     pf = hname = desg = unit = unit_full = short = letter_no = ""
