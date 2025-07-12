@@ -6,7 +6,8 @@ from docx import Document
 from datetime import date, timedelta
 import datetime
 from docx.shared import Inches
-from engine_card_pass import, handle_engine_card_pass
+from engine_card_pass import
+handle_engine_card_pass
 
 # Create output folder
 os.makedirs("generated_letters", exist_ok=True)
