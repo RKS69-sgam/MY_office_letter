@@ -6,7 +6,7 @@ from docx import Document
 from datetime import date, timedelta
 import datetime
 from docx.shared import Inches
-#from engine_card_pass import   #handle_engine_card_pass
+from engine_card_pass import, handle_engine_card_pass
 
 # Create output folder
 os.makedirs("generated_letters", exist_ok=True)
@@ -105,7 +105,7 @@ st.title("OFFICE OF THE SSE/PW/SGAM")
 letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
 # === Select Employee Logic ===
-#if letter_type in ["Engine Pass Letter", "Card Pass Letter"]: handle_engine_card_pass(letter_type)
+if letter_type in ["Engine Pass Letter", "Card Pass Letter"]: handle_engine_card_pass(letter_type)
 
 if letter_type == "SF-11 Punishment Order":
     df = sf11_register
