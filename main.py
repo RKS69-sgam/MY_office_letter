@@ -131,7 +131,7 @@ else:
         doc.save(output_path)
         return output_path
    # === Download Function ===
-   def download_word(path):
+    def download_word(path):
         with open(path, "rb") as f:
             b64 = base64.b64encode(f.read()).decode()
         name = os.path.basename(path)
