@@ -512,7 +512,7 @@ else:
                 "Application No.": count + 1,
                 "Exam Name": exam_name
             }
-          df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
+            df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
             df_noc.to_excel(noc_register_path, index=False)
      
 
