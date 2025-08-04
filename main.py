@@ -84,7 +84,7 @@ else:
 
     # === Generate Word Function ===
     def generate_word(template_path, context, filename):
-       bdoc = Document(template_path)
+        doc = Document(template_path)
 
         # Replace in paragraphs
         for p in doc.paragraphs:
