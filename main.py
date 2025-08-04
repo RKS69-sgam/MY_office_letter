@@ -273,7 +273,7 @@ else:
             [c.strip() for c in copy_input.split(",") if c.strip()]
         ) if copy_input.strip() else ""
    # === Exam NOC UI ===
-        elif letter_type == "Exam NOC":
+    elif letter_type == "Exam NOC":
         year = date.today().year
         df_match = df_noc[(df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year)]
         count = df_match.shape[0]
