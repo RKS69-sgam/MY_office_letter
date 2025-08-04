@@ -386,7 +386,7 @@ else:
                    if col in date_fields:
                        date_val = pd.to_datetime(row[col], errors="coerce")
                        updated_data[col] = st.date_input(col, value=date_val if pd.notna(date_val) else date.today(), key=f"upd_{col}")
-                    else:
+                   else:
                         updated_data[col] = st.text_input(col, value=row[col], key=f"upd_{col}")
 
                 if st.button("Update Employee"):
