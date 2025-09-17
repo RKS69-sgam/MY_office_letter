@@ -384,4 +384,22 @@ if password == "sgam@4321":
             manual_remark = st.text_input("Remark for Exit (optional)", key="exit_remark")
             if st.button("Mark Exited"):
                 index = emp_df[emp_df["PF No."] == selected_pf].index[0]
-               
+                
+    # === Generate Document and Download ===
+    if letter_type and template_files[letter_type] is not None and st.button("Generate Document"):
+        filename = ""
+        if letter_type == "Exam NOC":
+            filename = f"Exam_NOC_{context['PFNumber']}_{context}.docx"
+        elif letter_type == "SF-11 Punishment Order":
+            filename = f"SF-11_Punishment_{context['PFNumber']}_{context}.docx"
+        elif letter_type == "Quarter Allotment Letter":
+            filename = f"Quarter_Allotment_{context['PFNumber']}_{context['QuarterNo.']}.docx"
+        elif letter_type == "DAR NOC Letter":
+            filename = f"DAR_NOC_{context['PFNumber']}_{context}.docx"
+        else: # For other letters
+            filename = f"{letter_type.replace(' ', '_')}_{context['PFNumber']}_{context}.docx"
+
+        template_path = template_files[letter_type]
+        output_path = generate_word(template_path, context, filename)
+        st.success(f"Document '{filename}' generated successfully!")
+        download_word(output_path)
