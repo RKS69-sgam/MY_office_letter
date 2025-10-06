@@ -228,10 +228,10 @@ def render_pme_memo_ui(row):
 
     st.subheader("अन्य मेमो विवरण")
     # User inputs for memo specifics - Use PF number in key to force re-render on employee change
-    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key=f"pme_last_place_{pf_number}")
-    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key=f"pme_examiner_{pf_number}")
-    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key=f"pme_mark1_{pf_number}")
-    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key=f"pme_mark2_{pf_number}")
+    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="NKJ", key=f"pme_last_place_{pf_number}")
+    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS/NKJ", key=f"pme_examiner_{pf_number}")
+    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="", key=f"pme_mark1_{pf_number}")
+    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="", key=f"pme_mark2_{pf_number}")
     
     # --- Context Formatting ---
     
