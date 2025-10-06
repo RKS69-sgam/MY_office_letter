@@ -32,6 +32,7 @@ template_files = {
 }
 
 # --- Global DataFrames (Loaded once on app start) ---
+# Note: These global variables are modified via the update_registers function.
 quarter_file = "assets/QUARTER REGISTER.xlsx"
 try:
     quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
@@ -237,6 +238,63 @@ def render_pme_memo_ui(row):
         "LetterType": "PME Memo"
     }
 
+# === Register Update Function ===
+def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, count=None, exam_name=None, q_selected=None):
+    """Handles all logic for updating the global DataFrames and saving them to file."""
+    # Use global variables
+    global sf11_register, df_noc, quarter_df 
+
+    # === SF-11 Register Entry (For Other Reason or Duty Letter)
+    if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
+        new_entry = pd.DataFrame([{
+            "पी.एफ. क्रमांक": pf, "कर्मचारी का नाम": hname, "पदनाम": desg, "पत्र क्र.": context["LetterNo"],
+            "दिनांक": letter_date.strftime("%d-%m-%Y"), "दण्ड का विवरण": context["Memo"]
+        }])
+        sf11_register = pd.concat([sf11_register, new_entry], ignore_index=True)
+        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+        st.success("SF-11 register updated.")
+
+    # === SF-11 Register Update (For Punishment)
+    if letter_type == "SF-11 Punishment Order" and patra_kr is not None:
+        mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
+        if mask.any():
+            i = sf11_register[mask].index[0]
+            sf11_register.loc[i, "दण्डादेश क्रमांक"] = context["LetterNo"]
+            sf11_register.loc[i, "दण्ड का विवरण"] = context["Memo"]
+            sf11_register.loc[i, "पावती का दिनांक"] = context["pawati_date"].strftime("%d-%m-%Y")
+            sf11_register.loc[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = context["pratyuttar_date"].strftime("%d-%m-%Y")
+            sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+            st.success("SF-11 register updated.")
+        else:
+            st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
+
+    # === Exam NOC Register Entry
+    if letter_type == "Exam NOC" and count is not None and count < 4:
+        new_noc = {
+            "PF Number": pf, "Employee Name": hname, "Designation": desg, "NOC Year": date.today().year,
+            "Application No.": count + 1, "Exam Name": exam_name
+        }
+        df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
+        df_noc.to_excel(noc_register_path, index=False)
+        st.success("Exam NOC register updated.")
+        
+    # === Quarter Allotment Register Update
+    if letter_type == "Quarter Allotment Letter" and q_selected is not None:
+        # Re-read quarter_df display column as it's recreated on each run in the main script body
+        temp_quarter_df = quarter_df.copy()
+        temp_quarter_df["Display"] = temp_quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
+        
+        i = temp_quarter_df[temp_quarter_df["Display"] == q_selected].index[0]
+        quarter_df.loc[i, "PF No."] = pf
+        quarter_df.loc[i, "EMPLOYEE NAME"] = hname
+        quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
+        quarter_df.loc[i, "STATUS"] = "OCCUPIED"
+        
+        # Save quarter_df
+        quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
+        st.success("Quarter Register updated.")
+
+
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
 
@@ -255,6 +313,9 @@ if password == "sgam@4321":
     pf = hname = desg = unit_full = unit = short = letter_no = ""
     row = None
     letter_date = date.today()
+    patra_kr = None
+    q_selected = None
+    count = None # Initialize count for NOC check
 
     if letter_type == "SF-11 Punishment Order":
         df = sf11_register
@@ -317,7 +378,7 @@ if password == "sgam@4321":
         })
     elif letter_type == "SF-11 For Other Reason":
         memo_input = st.text_area("Memo")
-        context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
+        context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
     elif letter_type == "General Letter":
         context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
         officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
@@ -413,9 +474,8 @@ if password == "sgam@4321":
     
     # Generate letter command
     if st.button("Generate Letter"):
-        # The global declaration must be the very first statement if an assignment to the global variables
-        # is intended later in this block.
-        global sf11_register, df_noc, quarter_df 
+        # The global declaration is no longer needed here as modifications are delegated to update_registers
+        # where 'global' is correctly used in a function scope.
 
         if letter_type == "Update Employee Database":
             st.info("Employee Database update is handled by the dedicated UI section above. No letter generated.")
@@ -424,12 +484,12 @@ if password == "sgam@4321":
         else:
             # --- Generate the Document ---
             word_path = None
-            if letter_type == "Duty Letter (For Absent)" and mode == "SF-11 & Duty Letter Only":
+            if letter_type == "Duty Letter (For Absent)" and 'mode' in locals() and mode == "SF-11 & Duty Letter Only":
                 duty_path = generate_word(template_files["Duty Letter (For Absent)"], context, f"DutyLetter-{hname}.docx")
                 sf11_path = generate_word(template_files["SF-11 For Other Reason"], context, f"SF-11-{hname}.docx")
                 if duty_path: download_word(duty_path)
                 if sf11_path: download_word(sf11_path)
-                word_path = duty_path # Set word_path for register update check below
+                word_path = duty_path 
             elif letter_type == "General Letter":
                 today_str = datetime.datetime.now().strftime("%d-%m-%Y")
                 filename_parts = [context.get("FileName", "").replace("/", "-").strip(), context.get("OfficerName", "").strip(), today_str, context.get("Subject", "").replace("विषय:-", "").strip()[:10]]
@@ -453,52 +513,18 @@ if password == "sgam@4321":
             
             # --- Update Registers only if document generation was successful ---
             if word_path:
-                # === SF-11 Register Entry (For Other Reason or Duty Letter)
-                if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
-                    new_entry = pd.DataFrame([{
-                        "पी.एफ. क्रमांक": pf, "कर्मचारी का नाम": hname, "पदनाम": desg, "पत्र क्र.": letter_no,
-                        "दिनांक": letter_date.strftime("%d-%m-%Y"), "दण्ड का विवरण": context["Memo"]
-                    }])
-                    sf11_register = pd.concat([sf11_register, new_entry], ignore_index=True)
-                    sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-                    st.success("SF-11 register updated.")
-
-                # === SF-11 Register Update (For Punishment)
-                if letter_type == "SF-11 Punishment Order" and 'patra_kr' in locals():
-                    mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
-                    if mask.any():
-                        i = sf11_register[mask].index[0]
-                        sf11_register.loc[i, "दण्डादेश क्रमांक"] = letter_no
-                        sf11_register.loc[i, "दण्ड का विवरण"] = context["Memo"]
-                        sf11_register.loc[i, "पावती का दिनांक"] = context["pawati_date"].strftime("%d-%m-%Y")
-                        sf11_register.loc[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = context["pratyuttar_date"].strftime("%d-%m-%Y")
-                        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
-                        st.success("SF-11 register updated.")
-                    else:
-                        st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
-
-                # === Exam NOC Register Entry
-                if letter_type == "Exam NOC" and 'count' in locals() and count < 4:
-                    new_noc = {
-                        "PF Number": pf, "Employee Name": hname, "Designation": desg, "NOC Year": year,
-                        "Application No.": count + 1, "Exam Name": exam_name
-                    }
-                    df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
-                    df_noc.to_excel(noc_register_path, index=False)
-                    st.success("Exam NOC register updated.")
-                    
-                # === Quarter Allotment Register Update
-                if letter_type == "Quarter Allotment Letter":
-                    q_selected = context.get("q_selected")
-                    if q_selected:
-                        i = quarter_df[quarter_df["Display"] == q_selected].index[0]
-                        quarter_df.loc[i, "PF No."] = pf
-                        quarter_df.loc[i, "EMPLOYEE NAME"] = hname
-                        quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
-                        quarter_df.loc[i, "STATUS"] = "OCCUPIED"
-                        quarter_df.drop(columns=["Display"], errors="ignore", inplace=True)
-                        quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
-                        st.success("Quarter Register updated.")
+                update_registers(
+                    letter_type=letter_type, 
+                    context=context, 
+                    letter_date=letter_date, 
+                    pf=pf, 
+                    hname=hname, 
+                    desg=desg, 
+                    patra_kr=patra_kr, 
+                    count=count, 
+                    exam_name=context.get("ExamName"), 
+                    q_selected=context.get("q_selected")
+                )
 
 
 elif password != "":
