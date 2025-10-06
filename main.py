@@ -225,7 +225,7 @@ def render_pme_memo_ui(row):
         "name": row.get("Employee Name", ""),
         "age": age,
         "father_name": father_name,
-        "designation": row.get("Designation", ""),
+        "designation": row.get("Designation", ""), # Assuming "Designation" is intended for display, but main value comes from Hindi/English Designation below
         "medical_category": med_cat,
         "last_examined_date": last_pme_formatted,
         "last_place": last_place,
@@ -336,13 +336,15 @@ if password == "sgam@4321":
     elif letter_type == "General Letter" or letter_type == "Update Employee Database":
         letter_date = st.date_input("Letter Date", value=date.today())
     else: # All other letter types
-        master_df["Display"] = master_df.apply(lambda r: f"{r['PF No.']} - {r['Employee Name']} - {r['UNIT / MUSTER NUMBER']} - {r['Designation']}", axis=1)
+        # FIX: Changed 'Designation' to 'DESIGNATION' for correct column access
+        master_df["Display"] = master_df.apply(lambda r: f"{r['PF No.']} - {r['Employee Name']} - {r['UNIT / MUSTER NUMBER']} - {r['DESIGNATION']}", axis=1)
         selected = st.selectbox("Select Employee", master_df["Display"].dropna())
         row = master_df[master_df["Display"] == selected].iloc[0]
         
         pf = row["PF No."]
         hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
-        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["Designation"]
+        # FIX: Changed 'Designation' to 'DESIGNATION' for correct column access
+        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
         unit_full = str(row["UNIT / MUSTER NUMBER"])
         unit = unit_full[:2]
         short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
