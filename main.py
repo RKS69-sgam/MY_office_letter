@@ -317,7 +317,7 @@ if password == "sgam@4321":
         })
     elif letter_type == "SF-11 For Other Reason":
         memo_input = st.text_area("Memo")
-        context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
+        context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
     elif letter_type == "General Letter":
         context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
         officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
@@ -413,6 +413,10 @@ if password == "sgam@4321":
     
     # Generate letter command
     if st.button("Generate Letter"):
+        # The global declaration must be the very first statement if an assignment to the global variables
+        # is intended later in this block.
+        global sf11_register, df_noc, quarter_df 
+
         if letter_type == "Update Employee Database":
             st.info("Employee Database update is handled by the dedicated UI section above. No letter generated.")
         elif row is None and letter_type != "General Letter":
@@ -449,9 +453,6 @@ if password == "sgam@4321":
             
             # --- Update Registers only if document generation was successful ---
             if word_path:
-                # Need to use global for modification outside of initial load scope
-                global sf11_register, df_noc, quarter_df
-
                 # === SF-11 Register Entry (For Other Reason or Duty Letter)
                 if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
                     new_entry = pd.DataFrame([{
