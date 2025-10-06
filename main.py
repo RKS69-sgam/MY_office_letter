@@ -199,6 +199,7 @@ def render_pme_memo_ui(row):
     st.markdown("#### आवधिक चिकित्सा परीक्षा (PME) मेमो विवरण")
     
     # Fetch and safely parse initial date values
+    pf_number = row.get("PF No.", "NO_PF")
     dob_date = parse_date_safe(row.get("DOB"))
     doa_date = parse_date_safe(row.get("DOA"))
     
@@ -216,21 +217,21 @@ def render_pme_memo_ui(row):
     # --- UI Inputs (Editable) ---
     st.subheader("मेडिकल/ड्यूटी डिटेल्स (आवश्यक)")
     
-    # Editable Last PME Date
-    last_pme_date = st.date_input("पिछली PME दिनांक (Last PME Date)", value=initial_last_pme, key="pme_last_date")
+    # Editable Last PME Date - Use PF number in key to force re-render on employee change
+    last_pme_date = st.date_input("पिछली PME दिनांक (Last PME Date)", value=initial_last_pme, key=f"pme_last_date_{pf_number}")
     
-    # Editable PME Due Date
-    pme_due_date = st.date_input("PME ड्यू दिनांक (PME Due Date)", value=initial_pme_due, key="pme_due_date")
+    # Editable PME Due Date - Use PF number in key to force re-render on employee change
+    pme_due_date = st.date_input("PME ड्यू दिनांक (PME Due Date)", value=initial_pme_due, key=f"pme_due_date_{pf_number}")
     
-    # Editable Medical Category
-    med_cat = st.text_input("मेडिकल कैटेगरी (Medical Category)", value=initial_med_cat, key="pme_med_cat")
+    # Editable Medical Category - Use PF number in key to force re-render on employee change
+    med_cat = st.text_input("मेडिकल कैटेगरी (Medical Category)", value=initial_med_cat, key=f"pme_med_cat_{pf_number}")
 
     st.subheader("अन्य मेमो विवरण")
-    # User inputs for memo specifics
-    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key="pme_last_place")
-    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key="pme_examiner")
-    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key="pme_mark1")
-    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key="pme_mark2")
+    # User inputs for memo specifics - Use PF number in key to force re-render on employee change
+    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key=f"pme_last_place_{pf_number}")
+    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key=f"pme_examiner_{pf_number}")
+    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key=f"pme_mark1_{pf_number}")
+    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key=f"pme_mark2_{pf_number}")
     
     # --- Context Formatting ---
     
