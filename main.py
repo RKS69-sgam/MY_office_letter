@@ -148,44 +148,48 @@ def handle_engine_card_pass(letter_type):
         return "N/A"
     return ""
 
+def parse_date_safe(date_str):
+    """Attempts to parse date string into a datetime.date object. Returns None on failure."""
+    if pd.isna(date_str):
+        return None
+    try:
+        if isinstance(date_str, datetime.date):
+            return date_str
+        if isinstance(date_str, pd.Timestamp):
+            return date_str.date()
+        
+        # Common formats in the user's data: YYYY-MM-DD (from excel), DD-MM-YYYY, MM/DD/YYYY
+        formats = ["%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y-%m-%d %H:%M:%S"]
+        
+        for fmt in formats:
+            try:
+                return datetime.datetime.strptime(str(date_str).split()[0], fmt).date()
+            except ValueError:
+                continue
+    except Exception:
+        pass
+    return None
+
 def format_date_safe(date_val):
     """Safely converts date objects or strings to DD-MM-YYYY format."""
-    if isinstance(date_val, (pd.Timestamp, datetime.datetime, date)):
-        return date_val.strftime("%d-%m-%Y")
-    try:
-        if isinstance(date_val, str):
-            # Attempt to parse common string formats (YYYY-MM-DD or MM/DD/YYYY)
-            if '-' in date_val:
-                return datetime.datetime.strptime(date_val, "%Y-%m-%d").strftime("%d-%m-%Y")
-            elif '/' in date_val:
-                 return datetime.datetime.strptime(date_val, "%m/%d/%Y").strftime("%d-%m-%Y")
-    except:
-        pass
-    return str(date_val) if pd.notna(date_val) else "N/A"
+    parsed_date = parse_date_safe(date_val)
+    if parsed_date:
+        return parsed_date.strftime("%d-%m-%Y")
+    return "N/A" if pd.isna(date_val) else str(date_val)
 
-def get_age_service_length(dob_str, doa_str):
-    """Calculates age and service length from DOB and DOA strings."""
+def get_age_service_length(dob_date, doa_date):
+    """Calculates age and service length from DOB and DOA date objects."""
     today = date.today()
     age, service_year, service_month = 0, 0, 0
 
-    # Parse DOB
-    try:
-        dob = pd.to_datetime(dob_str, errors='coerce').date()
-        if pd.notna(dob):
-            age_delta = relativedelta(today, dob)
-            age = age_delta.years
-    except Exception:
-        pass
+    if dob_date:
+        age_delta = relativedelta(today, dob_date)
+        age = age_delta.years
 
-    # Parse DOA for service length
-    try:
-        doa = pd.to_datetime(doa_str, errors='coerce').date()
-        if pd.notna(doa):
-            service_delta = relativedelta(today, doa)
-            service_year = service_delta.years
-            service_month = service_delta.months
-    except Exception:
-        pass
+    if doa_date:
+        service_delta = relativedelta(today, doa_date)
+        service_year = service_delta.years
+        service_month = service_delta.months
 
     return age, service_year, service_month
 
@@ -194,40 +198,52 @@ def get_age_service_length(dob_str, doa_str):
 def render_pme_memo_ui(row):
     st.markdown("#### आवधिक चिकित्सा परीक्षा (PME) मेमो विवरण")
     
-    # Fetch data from DataFrame
-    dob_str = str(row.get("DOB", ""))
-    doa_str = str(row.get("DOA", ""))
-    last_pme_str = str(row.get("LAST PME", ""))
-    pme_due_str = str(row.get("PME DUE", ""))
-    med_cat = str(row.get("Medical category", "A3"))
+    # Fetch and safely parse initial date values
+    dob_date = parse_date_safe(row.get("DOB"))
+    doa_date = parse_date_safe(row.get("DOA"))
+    
+    initial_last_pme = parse_date_safe(row.get("LAST PME")) or date.today()
+    initial_pme_due = parse_date_safe(row.get("PME DUE")) or date.today()
+    initial_med_cat = str(row.get("Medical category", "A3"))
+    
+    # Get other necessary data
     father_name = str(row.get("FATHER'S NAME", "N/A"))
+    designation_hindi = row.get("Designation in Hindi") or row.get("DESIGNATION")
 
     # Calculate Age and Service Length
-    age, service_year, service_month = get_age_service_length(dob_str, doa_str)
+    age, service_year, service_month = get_age_service_length(dob_date, doa_date)
+    
+    # --- UI Inputs (Editable) ---
+    st.subheader("मेडिकल/ड्यूटी डिटेल्स (आवश्यक)")
+    
+    # Editable Last PME Date
+    last_pme_date = st.date_input("पिछली PME दिनांक (Last PME Date)", value=initial_last_pme, key="pme_last_date")
+    
+    # Editable PME Due Date
+    pme_due_date = st.date_input("PME ड्यू दिनांक (PME Due Date)", value=initial_pme_due, key="pme_due_date")
+    
+    # Editable Medical Category
+    med_cat = st.text_input("मेडिकल कैटेगरी (Medical Category)", value=initial_med_cat, key="pme_med_cat")
 
+    st.subheader("अन्य मेमो विवरण")
     # User inputs for memo specifics
     last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key="pme_last_place")
     examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key="pme_examiner")
     first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key="pme_mark1")
     second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key="pme_mark2")
     
-    # Formatting for context
-    dob_formatted = format_date_safe(dob_str)
-    doa_formatted = format_date_safe(doa_str)
-    last_pme_formatted = format_date_safe(last_pme_str)
-    
-    st.info(f"PME Due Date: **{format_date_safe(pme_due_str)}** | Medical Category: **{med_cat}**")
+    # --- Context Formatting ---
     
     return {
         # PME Memo Placeholders
-        "dob": dob_formatted,
-        "doa": doa_formatted,
+        "dob": format_date_safe(dob_date),
+        "doa": format_date_safe(doa_date),
         "name": row.get("Employee Name", ""),
         "age": age,
         "father_name": father_name,
-        "designation": row.get("Designation", ""), # Assuming "Designation" is intended for display, but main value comes from Hindi/English Designation below
+        "designation": designation_hindi, # FIX: ensures Hindi designation is used for the memo
         "medical_category": med_cat,
-        "last_examined_date": last_pme_formatted,
+        "last_examined_date": format_date_safe(last_pme_date), # Use edited date
         "last_place": last_place,
         "examiner": examiner,
         "service_year": service_year,
@@ -380,7 +396,7 @@ if password == "sgam@4321":
         })
     elif letter_type == "SF-11 For Other Reason":
         memo_input = st.text_area("Memo")
-        context["Memo"] = memo_input + " जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
+        context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
     elif letter_type == "General Letter":
         context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
         officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
