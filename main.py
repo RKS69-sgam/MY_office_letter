@@ -140,7 +140,7 @@ def generate_word(template_path, context, filename):
                 table.style = "Table Grid"
                 
                 # Define column widths manually
-                column_widths = [Inches(0.5), Inches(1.0), Inches(1.5), Inches(1.0), Inches(1.2), Inches(0.8)] # Total 6.0 inches
+                column_widths = [Inches(0.25), Inches(1.0), Inches(1.85), Inches(1.0), Inches(1.4), Inches(0.5)] # Total 6.0 inches
                 
                 # Apply column widths and headers
                 hdr = table.rows[0].cells
@@ -269,8 +269,8 @@ def render_pme_memo_ui(row):
     st.subheader("अन्य मेमो विवरण")
     last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key=f"pme_last_place_{pf_number}")
     examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key=f"pme_examiner_{pf_number}")
-    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key=f"pme_mark1_{pf_number}")
-    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key=f"pme_mark2_{pf_number}")
+    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="", key=f"pme_mark1_{pf_number}")
+    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="", key=f"pme_mark2_{pf_number}")
     
     # --- Context Formatting ---
     
