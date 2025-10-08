@@ -90,8 +90,9 @@ df_noc = safe_load_df(
     sheet_name=None 
 )
 
-# Line 88 Fix: Ensure df_noc is a DataFrame with expected columns if it's empty
-if df_noc.empty or "PF Number" not in df_noc.columns:
+# Robust initialization check for df_noc (Fix for recurring error)
+# Ensures df_noc is a DataFrame before checking its attributes
+if not isinstance(df_noc, pd.DataFrame) or df_noc.empty or "PF Number" not in df_noc.columns:
     df_noc = pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
     
 # --- End of Robust Global DataFrames Loading ---
@@ -427,14 +428,15 @@ if password == "sgam@4321":
                     })
             
             # Use the data of the first selected employee for the general letter context
-            r = selected_rows.iloc[0]
-            pf = r["PF No."]
-            hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
-            desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
-            unit_full = str(r["UNIT / MUSTER NUMBER"])
-            unit = unit_full[:2]
-            short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
-            letter_no = f"{short}/{unit}/NOC"
+            if not selected_rows.empty:
+                r = selected_rows.iloc[0]
+                pf = r["PF No."]
+                hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+                desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+                unit_full = str(r["UNIT / MUSTER NUMBER"])
+                unit = unit_full[:2]
+                short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
+                letter_no = f"{short}/{unit}/NOC"
         
         letter_date = st.date_input("Letter Date", value=date.today())
         
