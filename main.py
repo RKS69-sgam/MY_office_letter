@@ -98,7 +98,7 @@ def generate_word(template_path, context, filename):
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
 
-    # ✅ Exam NOC Table Insertion (Updated for Multi-employee)
+    # ✅ Exam NOC Table Insertion (Updated for individual inputs and accurate columns)
     if context.get("LetterType") == "Exam NOC" and context.get("EmployeeData"):
         for i, paragraph in enumerate(doc.paragraphs):
             if "[PFNumber]" in paragraph.text:
@@ -108,7 +108,7 @@ def generate_word(template_path, context, filename):
                 p._p = p._element = None
                 
                 # Insert table
-                table = doc.add_table(rows=1, cols=5)
+                table = doc.add_table(rows=1, cols=6)
                 table.style = "Table Grid"
                 table.autofit = True
                 
@@ -118,7 +118,8 @@ def generate_word(template_path, context, filename):
                 hdr[1].text = "PF Number"
                 hdr[2].text = "Employee Name"
                 hdr[3].text = "Designation"
-                hdr[4].text = "Term of NOC"
+                hdr[4].text = "Exam's Name" # Updated column name
+                hdr[5].text = "Term of NOC" # Updated column name
                 
                 # Add rows for each employee
                 for idx, emp_data in enumerate(context["EmployeeData"]):
@@ -127,11 +128,9 @@ def generate_word(template_path, context, filename):
                     row_cells[1].text = str(emp_data["PF Number"])
                     row_cells[2].text = emp_data["Employee Name"]
                     row_cells[3].text = emp_data["Designation"]
-                    row_cells[4].text = emp_data["Term of NOC"]
+                    row_cells[4].text = emp_data["Exam Name"] # Use individual Exam Name
+                    row_cells[5].text = emp_data["Term of NOC"] # Use individual Term
                     
-                # Add Exam Name and NOC Year as separate paragraph after the table for context
-                doc.add_paragraph(f"परीक्षा का नाम (Exam Name): {context['ExamName']}")
-                doc.add_paragraph(f"एनओसी वर्ष (NOC Year): {context['NOCYear']}")
                 break
     
     output_path = os.path.join("generated_letters", filename)
@@ -253,8 +252,7 @@ def render_pme_memo_ui(row):
 def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, noc_employees=None, q_selected=None):
     """Handles all logic for updating the global DataFrames and saving them to file."""
     global sf11_register, df_noc, quarter_df 
-    
-    # ... (SF-11 and Quarter updates remain the same) ...
+
     # --- SF-11 Register Entry (For Other Reason or Duty Letter) ---
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
         new_entry = pd.DataFrame([{
@@ -294,15 +292,14 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
         st.success("Quarter Register updated.")
 
 
-    # === Exam NOC Register Entry (Updated for Multi-employee) ===
+    # === Exam NOC Register Entry (Updated for individual inputs) ===
     if letter_type == "Exam NOC" and noc_employees is not None and noc_employees:
         new_noc_entries = []
         year = date.today().year
-        exam_name = context["ExamName"]
-        term = context["Term"]
         
         for emp in noc_employees:
             pf_num = emp["PF Number"]
+            exam_name = emp["Exam Name"]
             
             # Check existing count for the current employee/year
             df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
@@ -349,25 +346,36 @@ if password == "sgam@4321":
     # --- Conditional Employee Selection & Data Fetching ---
 
     if letter_type == "Exam NOC":
-        # Multi-select for Exam NOC
         selected_display_names = st.multiselect("Select Employees for NOC", master_df["Display"].dropna())
         
         if selected_display_names:
-            # Prepare data for all selected employees
             selected_rows = master_df[master_df["Display"].isin(selected_display_names)]
             
-            for index, r in selected_rows.iterrows():
-                hname_val = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+            st.markdown("### परीक्षा विवरण (Exam Details - Individual)")
+            
+            for idx, r in selected_rows.iterrows():
+                pf_num = str(r["PF No."])
+                employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
                 desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
                 
-                noc_employees.append({
-                    "PF Number": r["PF No."],
-                    "Employee Name": hname_val,
-                    "Designation": desg_val
-                })
+                st.markdown(f"**{employee_name} ({pf_num})**")
+                
+                # Individual Inputs for Exam Name and Term
+                exam_name = st.text_input(f"Exam Name", key=f"exam_name_{pf_num}", 
+                                          placeholder="Enter Exam Name")
+                term = st.text_input(f"Term of NOC", key=f"noc_term_{pf_num}", 
+                                     placeholder="e.g., 2024-25")
+                
+                if exam_name and term:
+                    noc_employees.append({
+                        "PF Number": pf_num,
+                        "Employee Name": employee_name,
+                        "Designation": desg_val,
+                        "Exam Name": exam_name,
+                        "Term of NOC": term
+                    })
             
-            # Use the data of the first selected employee for the general letter context 
-            # (Letter No., Unit, etc.)
+            # Use the data of the first selected employee for the general letter context
             r = selected_rows.iloc[0]
             pf = r["PF No."]
             hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
@@ -482,26 +490,16 @@ if password == "sgam@4321":
             [c.strip() for c in copy_input.split(",") if c.strip()]
         ) if copy_input.strip() else ""
 
-    # === Exam NOC UI (Updated for Multi-employee) ===
+    # === Exam NOC UI is now handled in the selection block above ===
     elif letter_type == "Exam NOC":
-        if not noc_employees:
-             st.warning("कृपया ऊपर NOC के लिए कर्मचारी का चयन करें।")
-        else:
-            year = date.today().year
-            exam_name = st.text_input("Exam Name", key="noc_exam_name")
-            term = st.text_input("Term of NOC (e.g., 2024-25)", key="noc_term_input")
-            
+        # Additional context specific to NOC processing is added here.
+        if noc_employees:
             context.update({
-                "ExamName": exam_name,
-                "Term": term,
-                "NOCYear": year,
+                "ExamName": noc_employees[0]["Exam Name"], # Using first employee data for top-level context
+                "Term": noc_employees[0]["Term of NOC"],
+                "NOCYear": date.today().year,
                 "LetterType": "Exam NOC",
-                "EmployeeData": [{
-                    "PF Number": emp["PF Number"],
-                    "Employee Name": emp["Employee Name"],
-                    "Designation": emp["Designation"],
-                    "Term of NOC": term # Apply same term to all
-                } for emp in noc_employees]
+                "EmployeeData": noc_employees
             })
 
     elif letter_type == "SF-11 Punishment Order" and row is not None:
@@ -551,10 +549,10 @@ if password == "sgam@4321":
 
         if letter_type == "Update Employee Database":
             st.info("Employee Database update is handled by the dedicated UI section above. No letter generated.")
-        elif row is None and letter_type != "General Letter" and letter_type != "Exam NOC":
+        elif row is None and letter_type not in ["General Letter", "Exam NOC"]:
             st.error("Please select an employee before generating the letter.")
         elif letter_type == "Exam NOC" and not noc_employees:
-            st.error("Please select at least one employee for the Exam NOC.")
+            st.error("Please select at least one employee for the Exam NOC and fill in the details.")
         else:
             # --- Generate the Document ---
             word_path = None
@@ -601,7 +599,7 @@ if password == "sgam@4321":
                     hname=hname, 
                     desg=desg, 
                     patra_kr=patra_kr, 
-                    noc_employees=noc_employees, 
+                    noc_employees=noc_employees if letter_type == "Exam NOC" else None, 
                     q_selected=context.get("q_selected")
                 )
 
