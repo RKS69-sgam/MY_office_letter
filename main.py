@@ -140,7 +140,7 @@ def generate_word(template_path, context, filename):
                 table.style = "Table Grid"
                 
                 # Define column widths manually
-                column_widths = [Inches(0.25), Inches(1.0), Inches(1.85), Inches(1.0), Inches(1.4), Inches(0.5)] # Total 6.0 inches
+                column_widths = [Inches(0.15), Inches(1.0), Inches(1.95), Inches(1.0), Inches(1.75), Inches(0.15)] # Total 6.0 inches
                 
                 # Apply column widths and headers
                 hdr = table.rows[0].cells
