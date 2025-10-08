@@ -174,23 +174,27 @@ def generate_word(template_path, context, filename):
             if len(table.columns) >= 5: 
                 # Check if the table contains the placeholders
                 found_placeholders = False
-                for cell in table.rows[1].cells: # Check the second row where data placeholders usually are
-                    if "[Employee Name]" in cell.text:
+                # Check row 1 (index 1) for placeholders as it's the data row
+                for cell in table.rows[1].cells: 
+                    if "[Employee Name]" in cell.text or "[DARStatus]" in cell.text:
                         found_placeholders = True
                         break
                 
                 if found_placeholders:
-                    # Update the data row (assuming the row index 1 contains the template data)
+                    # Replace placeholders in the existing table cells (row index 1)
                     data_row_cells = table.rows[1].cells
                     
-                    # Replace placeholders in the existing table cells
-                    # Note: We use raw text replacement here to ensure it works before general replacement
+                    # Note: We use context.get() for safety
                     data_row_cells[1].text = context.get("EmployeeName", "")
                     data_row_cells[2].text = context.get("Designation", "")
                     data_row_cells[3].text = str(context.get("PFNumber", ""))
                     data_row_cells[4].text = context.get("DARStatus", "")
                     
-                    # Important: Update date placeholder in header as general replacement might miss it
+                    # Delete the extra placeholder in data_row_cells[0] if present (e.g., "[Employee Name]")
+                    if "[Employee Name]" in data_row_cells[0].text:
+                        data_row_cells[0].text = "1"
+                    
+                    # Update date placeholder in header as general replacement might miss it
                     for p in doc.paragraphs:
                         if "[Date]" in p.text:
                             replace_placeholder_in_para(p, {"Date": context.get("LetterDate", "")})
@@ -516,9 +520,10 @@ if password == "sgam@4321":
         letter_no = f"{short}/{unit}/{unit}"
         letter_date = st.date_input("Letter Date", value=date.today())
         
+        # NOTE: render_dar_noc_ui is called here, and its output is stored in dar_context
         dar_context = render_dar_noc_ui()
-        context.update(dar_context)
-        
+        # The update is deferred to the main context initialization block below
+
     # --- Single Employee Selection for SF-11 Punishment Order ---
     elif letter_type == "SF-11 Punishment Order":
         df = sf11_register
@@ -555,10 +560,14 @@ if password == "sgam@4321":
         letter_date = st.date_input("Letter Date", value=date.today())
 
 
-    # === Common context for template replacement ===
-    # Re-initialize context to ensure it contains all necessary fields based on the selected employee/type
-    # This prevents the 'NoneType' error if row was not set in a previous block.
-    if row is not None or letter_type in ["General Letter", "Exam NOC"]:
+    # === Common context initialization and update ===
+    # Initialize context safely as an empty dictionary
+    context = {} 
+
+    # Only attempt to initialize full context if a single employee row or special case (NOC/General) is available
+    if row is not None or letter_type in ["General Letter", "Exam NOC", "DAR/Vigilance NOC"]:
+        
+        # Base Context Initialization
         context = {
             "LetterDate": letter_date.strftime("%d-%m-%Y"),
             "EmployeeName": hname,
@@ -570,115 +579,109 @@ if password == "sgam@4321":
             "LetterNo": letter_no,
             "DutyDate": "", "FromDate": "", "ToDate": "", "JoinDate": "", "Memo": "",
             "OfficerUnit": "", "Subject": "", "Reference": "", "CopyTo": "", "DOR": dor_str,
-            "Date": letter_date.strftime("%d-%m-%Y") # For DAR NOC Template
+            "Date": letter_date.strftime("%d-%m-%Y") 
         }
-    else:
-        # Fallback if employee selection failed unexpectedly
-        context = {} # Ensure context is at least an empty dict to prevent errors if passed to generate_word.
-    
-    # --- Letter Specific Context Updates (Apply after Common Context is initialized) ---
-    
-    if letter_type == "Duty Letter (For Absent)" and row is not None:
-        mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
-        fd = st.date_input("From Date")
-        td = st.date_input("To Date", value=date.today())
-        jd = st.date_input("Join Date", value=td + timedelta(days=1))
-        context.update({
-            "FromDate": fd.strftime("%d-%m-%Y"),
-            "ToDate": td.strftime("%d-%m-%Y"),
-            "JoinDate": jd.strftime("%d-%m-%Y"),
-            "DutyDate": jd.strftime("%d-%m-%Y"),
-            "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
-        })
-    elif letter_type == "SF-11 For Other Reason" and row is not None:
-        memo_input = st.text_area("Memo")
-        context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
-    elif letter_type == "General Letter":
-        context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
-        officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
-        if officer_option == "अन्‍य": officer_option = st.text_input("अन्‍य का नाम/पदनाम/एजेंसी का नाम लिखें")
-        context["OfficerName"] = officer_option
         
-        beyohari_officers = ["सहायक मण्‍डल अभियंता", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "शाखा सचिव (WCRMS)"]
-        jbp_officers = ["मण्‍डल अभिंयता (पूर्व)", "मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)"]
+        # --- Letter Specific Context Updates (Merging UI inputs) ---
         
-        if officer_option == "कनिष्‍ठ अभियंता (रेल पथ)": address_choices = ["निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
-        elif officer_option in beyohari_officers: address_choices = ["प.म.रे. ब्‍योहारी", "अन्‍य"]
-        elif officer_option in jbp_officers: address_choices = ["प.म.रे. जबलपुर", "अन्‍य"]
-        else: address_choices = ["", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं", " निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
-        
-        address_option = st.selectbox("पता", address_choices)
-        if address_option == "अन्‍य": address_option = st.text_input("अन्‍य का पता लिखें")
-        context["OfficeAddress"] = address_option
-        
-        context["Subject"] = f"विषय:- {st.text_input('विषय')}" if st.text_input('विषय').strip() else ""
-        context["Reference"] = f"संदर्भ:- {st.text_input('संदर्भ')}" if st.text_input('संदर्भ').strip() else ""
-        context["Memo"] = st.text_area("मुख्‍य विवरण")
-        copy_input = st.text_input("प्रतिलिपि")
-        context["CopyTo"] = f"प्रतिलिपि:- " + "\n".join(
-            [c.strip() for c in copy_input.split(",") if c.strip()]
-        ) if copy_input.strip() else ""
-
-    elif letter_type == "Exam NOC":
-        if noc_employees:
+        if letter_type == "Duty Letter (For Absent)":
+            mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
+            fd = st.date_input("From Date")
+            td = st.date_input("To Date", value=date.today())
+            jd = st.date_input("Join Date", value=td + timedelta(days=1))
             context.update({
-                "ExamName": noc_employees[0]["Exam Name"], 
-                "Term": noc_employees[0]["Term of NOC"],
-                "NOCYear": date.today().year,
-                "LetterType": "Exam NOC",
-                "EmployeeData": noc_employees
+                "FromDate": fd.strftime("%d-%m-%Y"),
+                "ToDate": td.strftime("%d-%m-%Y"),
+                "JoinDate": jd.strftime("%d-%m-%Y"),
+                "DutyDate": jd.strftime("%d-%m-%Y"),
+                "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
             })
-
-    elif letter_type == "SF-11 Punishment Order" and row is not None:
-        st.markdown("#### SF-11 Register से विवरण")
-        st.markdown(f"**आरोप का विवरण:** {row.get('आरोप का विवरण', '—')}")
-        pawati_date = st.date_input("पावती का दिनांक", value=date.today())
-        pratyuttar_date = st.date_input("यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक", value=date.today())
+        elif letter_type == "SF-11 For Other Reason":
+            memo_input = st.text_area("Memo")
+            context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
+        elif letter_type == "General Letter":
+            context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
+            officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
+            if officer_option == "अन्‍य": officer_option = st.text_input("अन्‍य का नाम/पदनाम/एजेंसी का नाम लिखें")
+            context["OfficerName"] = officer_option
+            
+            beyohari_officers = ["सहायक मण्‍डल अभियंता", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "शाखा सचिव (WCRMS)"]
+            jbp_officers = ["मण्‍डल अभिंयता (पूर्व)", "मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)"]
+            
+            if officer_option == "कनिष्‍ठ अभियंता (रेल पथ)": address_choices = ["निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
+            elif officer_option in beyohari_officers: address_choices = ["प.म.रे. ब्‍योहारी", "अन्‍य"]
+            elif officer_option in jbp_officers: address_choices = ["प.म.रे. जबलपुर", "अन्‍य"]
+            else: address_choices = ["", "प.म.रे. ब्‍योहारी", "प.म.रे. जबलपुर", "सरईग्राम", "देवराग्राम", "बरगवॉं", " निवासरोड", "भरसेड़ी", "गजराबहरा", "गोंदवाली", "अन्‍य"]
+            
+            address_option = st.selectbox("पता", address_choices)
+            if address_option == "अन्‍य": address_option = st.text_input("अन्‍य का पता लिखें")
+            context["OfficeAddress"] = address_option
+            
+            context["Subject"] = f"विषय:- {st.text_input('विषय')}" if st.text_input('विषय').strip() else ""
+            context["Reference"] = f"संदर्भ:- {st.text_input('संदर्भ')}" if st.text_input('संदर्भ').strip() else ""
+            context["Memo"] = st.text_area("मुख्‍य विवरण")
+            copy_input = st.text_input("प्रतिलिपि")
+            context["CopyTo"] = f"प्रतिलिपि:- " + "\n".join(
+                [c.strip() for c in copy_input.split(",") if c.strip()]
+            ) if copy_input.strip() else ""
         
-        context["Memo"] = st.selectbox("Punishment Type", [
-            "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
-            "आगामी देय एक वर्ष की वेतन वृद्धि संचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
-            "आगामी देय एक सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय एक सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता."
-        ])
-        context["Dandadesh"] = letter_no
-        context["LetterNo."] = patra_kr
-        context["Unit"] = unit
-        context["SF-11Date"] = format_date_safe(sf11date)
-        context["pawati_date"] = pawati_date
-        context["pratyuttar_date"] = pratyuttar_date
-        
-    elif letter_type == "Quarter Allotment Letter" and row is not None:
-        try:
-            quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
-            q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
-            qrow = quarter_df[quarter_df["Display"] == q_selected].iloc[0]
-            station = qrow["STATION"]
-            qno = qrow["QUARTER NO."]
-            context.update({
-                "QuarterNo.": qno,
-                "Station": station,
-                "q_selected": q_selected
-            })
-        except Exception as e:
-            st.warning(f"Quarter selection failed: {e}. Ensure QUARTER REGISTER data integrity.")
-            q_selected = None
+        elif letter_type == "Exam NOC":
+            if noc_employees:
+                context.update({
+                    "ExamName": noc_employees[0]["Exam Name"], 
+                    "Term": noc_employees[0]["Term of NOC"],
+                    "NOCYear": date.today().year,
+                    "LetterType": "Exam NOC",
+                    "EmployeeData": noc_employees
+                })
 
+        elif letter_type == "SF-11 Punishment Order" and row is not None:
+            pawati_date = st.date_input("पावती का दिनांक", value=date.today())
+            pratyuttar_date = st.date_input("यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक", value=date.today())
+            
+            context["Memo"] = st.selectbox("Punishment Type", [
+                "आगामी देय एक वर्ष की वेतन वृद्धि असंचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
+                "आगामी देय एक वर्ष की वेतन वृद्धि संचयी प्रभाव से रोके जाने के अर्थदंड से दंडित किया जाता है।",
+                "आगामी देय एक सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
+                "आगामी देय एक सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
+                "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
+                "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता."
+            ])
+            context["Dandadesh"] = letter_no
+            context["LetterNo."] = patra_kr
+            context["Unit"] = unit
+            context["SF-11Date"] = format_date_safe(sf11date)
+            context["pawati_date"] = pawati_date
+            context["pratyuttar_date"] = pratyuttar_date
+            
+        elif letter_type == "Quarter Allotment Letter" and row is not None:
+            try:
+                quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
+                q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
+                qrow = quarter_df[quarter_df["Display"] == q_selected].iloc[0]
+                station = qrow["STATION"]
+                qno = qrow["QUARTER NO."]
+                context.update({
+                    "QuarterNo.": qno,
+                    "Station": station,
+                    "q_selected": q_selected
+                })
+            except Exception as e:
+                st.warning(f"Quarter selection failed: {e}. Ensure QUARTER REGISTER data integrity.")
+                q_selected = None
 
-    elif letter_type == "PME Memo" and row is not None:
-        pme_context = render_pme_memo_ui(row)
-        context.update(pme_context)
-    
-    elif letter_type == "DAR/Vigilance NOC" and row is not None:
-        # Context was updated during selection flow
-        pass
-    
-    elif letter_type == "Update Employee Database":
-        st.subheader("Update Employee Database")
-        st.info("The actual Update Employee Database logic is complex and needs to be fully implemented here, followed by saving the master Excel file.")
+        elif letter_type == "PME Memo" and row is not None:
+            pme_context = render_pme_memo_ui(row)
+            context.update(pme_context)
         
+        elif letter_type == "DAR/Vigilance NOC" and row is not None:
+            # We already called render_dar_noc_ui and stored the result in dar_context
+            # Now, safely update the context
+            if 'dar_context' in locals():
+                context.update(dar_context)
+            
+        # Add logic for Engine/Card Pass here if needed
+
     
     # Generate letter command
     if st.button("Generate Letter"):
