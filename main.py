@@ -349,17 +349,17 @@ def render_pme_memo_ui(row):
     }
     
 # === DAR/Vigilance UI Function (Updated for Multi-Employee) ===
-def render_dar_noc_ui(employees_data):
+def render_dar_noc_ui(selected_rows):
     st.markdown("### DAR/Vigilance स्टेटस (Individual Status)")
     
     default_status = "कर्मचारी के विरूद्ध डी.ए.आर. एवं विजिलेंस केश लम्बित नहीं है"
     updated_employees = []
     
-    for r in employees_data.itertuples():
-        # Access properties using attribute access for safety in itertuples
-        pf_num = str(getattr(r, "PF No."))
-        employee_name = getattr(r, "Employee Name in Hindi") if pd.notna(getattr(r, "Employee Name in Hindi")) else getattr(r, "Employee Name")
-        desg_val = getattr(r, "Designation in Hindi") if pd.notna(getattr(r, "Designation in Hindi")) else getattr(r, "DESIGNATION")
+    for idx, r in selected_rows.iterrows():
+        # Access properties using .get() for robustness, especially with spaces in names
+        pf_num = str(r.get("PF No."))
+        employee_name = r.get("Employee Name in Hindi") if pd.notna(r.get("Employee Name in Hindi")) else r.get("Employee Name")
+        desg_val = r.get("Designation in Hindi") if pd.notna(r.get("Designation in Hindi")) else r.get("DESIGNATION")
         
         st.markdown(f"**{employee_name} ({pf_num})**")
         
@@ -498,12 +498,12 @@ if password == "sgam@4321":
             st.markdown("### परीक्षा विवरण (Exam Details - Individual)")
             
             for idx, r in selected_rows.iterrows():
-                pf_num = str(r["PF No."])
-                employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
-                desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+                pf_num = str(r.get("PF No."))
+                employee_name = r.get("Employee Name in Hindi") if pd.notna(r.get("Employee Name in Hindi")) else r.get("Employee Name")
+                desg_val = r.get("Designation in Hindi") if pd.notna(r.get("Designation in Hindi")) else r.get("DESIGNATION")
                 
                 year = date.today().year
-                df_match = df_noc[(df_noc["PF No."] == pf_num) & (df_noc["NOC Year"] == year)]
+                df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
                 current_count = df_match.shape[0]
 
                 if current_count >= 4:
@@ -528,12 +528,12 @@ if password == "sgam@4321":
             
             if not selected_rows.empty:
                 r = selected_rows.iloc[0]
-                pf = r["PF No."]
-                hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
-                desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
-                unit_full = str(r["UNIT / MUSTER NUMBER"])
+                pf = r.get("PF No.")
+                hname = r.get("Employee Name in Hindi") if pd.notna(r.get("Employee Name in Hindi")) else r.get("Employee Name")
+                desg = r.get("Designation in Hindi") if pd.notna(r.get("Designation in Hindi")) else r.get("DESIGNATION")
+                unit_full = str(r.get("UNIT / MUSTER NUMBER"))
                 unit = unit_full[:2]
-                short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
+                short = r.get("SF-11 short name") if pd.notna(r.get("SF-11 short name")) else "STF"
                 letter_no = f"{short}/{unit}/NOC"
         
         letter_date = st.date_input("Letter Date", value=date.today())
@@ -551,12 +551,12 @@ if password == "sgam@4321":
             if not selected_rows.empty:
                 # Use the data of the first selected employee for the general letter context
                 r = selected_rows.iloc[0]
-                pf = r["PF No."]
-                hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
-                desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
-                unit_full = str(r["UNIT / MUSTER NUMBER"])
+                pf = r.get("PF No.")
+                hname = r.get("Employee Name in Hindi") if pd.notna(r.get("Employee Name in Hindi")) else r.get("Employee Name")
+                desg = r.get("Designation in Hindi") if pd.notna(r.get("Designation in Hindi")) else r.get("DESIGNATION")
+                unit_full = str(r.get("UNIT / MUSTER NUMBER"))
                 unit = unit_full[:2]
-                short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
+                short = r.get("SF-11 short name") if pd.notna(r.get("SF-11 short name")) else "STF"
                 letter_no = f"{short}/{unit}/{unit}"
         
         letter_date = st.date_input("Letter Date", value=date.today())
@@ -587,12 +587,12 @@ if password == "sgam@4321":
     else: 
         selected = st.selectbox("Select Employee", master_df["Display"].dropna())
         row = master_df[master_df["Display"] == selected].iloc[0]
-        pf = row["PF No."]
-        hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
-        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
-        unit_full = str(row["UNIT / MUSTER NUMBER"])
+        pf = row.get("PF No.")
+        hname = row.get("Employee Name in Hindi") if pd.notna(row.get("Employee Name in Hindi")) else row.get("Employee Name")
+        desg = row.get("Designation in Hindi") if pd.notna(row.get("Designation in Hindi")) else row.get("DESIGNATION")
+        unit_full = str(row.get("UNIT / MUSTER NUMBER"))
         unit = unit_full[:2]
-        short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
+        short = row.get("SF-11 short name") if pd.notna(row.get("SF-11 short name")) else "STF"
         letter_no = f"{short}/{unit}/{unit}"
         letter_date = st.date_input("Letter Date", value=date.today())
 
