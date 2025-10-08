@@ -29,36 +29,66 @@ template_files = {
     "PME Memo": "assets/pme_memo_temp.docx"
 }
 
-# --- Global DataFrames (Loaded once on app start) ---
-quarter_file = "assets/QUARTER REGISTER.xlsx"
-try:
-    quarter_df = pd.read_excel(quarter_file, sheet_sheet_name="Sheet1")
-except Exception:
-    quarter_file = "assets/QUARTER REGISTER.xlsx - Sheet1.csv"
-    quarter_df = pd.read_csv(quarter_file)
+# --- Robust Global DataFrames Loading ---
+def safe_load_df(excel_path, csv_path=None, sheet_name=None, is_master=False):
+    """Attempts to load DataFrame from Excel, then CSV if Excel fails."""
+    if csv_path is None:
+        csv_path = excel_path.replace(".xlsx", ".xlsx - Sheet1.csv")
 
-employee_master_path = "assets/EMPLOYEE MASTER DATA.xlsx"
-try:
-    employee_master = pd.read_excel(employee_master_path, sheet_sheet_name=None)
-except Exception:
-    employee_master = {"Apr.25": pd.read_csv("assets/EMPLOYEE MASTER DATA.xlsx - Apr.25.csv")}
+    if is_master:
+        # Special handling for employee_master, which is a dictionary of DataFrames
+        try:
+            return pd.read_excel(excel_path, sheet_name=None)
+        except Exception as e:
+            st.warning(f"Failed to load Excel master data ({excel_path}). Trying CSV fallback...")
+            try:
+                # Assuming one main sheet for the master CSV
+                return {"Apr.25": pd.read_csv(csv_path)}
+            except Exception as csv_e:
+                st.error(f"Failed to load Employee Master from CSV: {csv_e}")
+                return {"Apr.25": pd.DataFrame()}
+    else:
+        # Standard DataFrame loading
+        try:
+            return pd.read_excel(excel_path, sheet_name=sheet_name)
+        except Exception as e:
+            st.warning(f"Failed to load Excel data ({excel_path}). Trying CSV fallback...")
+            try:
+                return pd.read_csv(csv_path)
+            except Exception as csv_e:
+                st.error(f"Failed to load data from CSV: {csv_e}")
+                return pd.DataFrame()
+
+
+quarter_df = safe_load_df(
+    excel_path="assets/QUARTER REGISTER.xlsx",
+    csv_path="assets/QUARTER REGISTER.xlsx - Sheet1.csv",
+    sheet_name="Sheet1"
+)
+
+employee_master = safe_load_df(
+    excel_path="assets/EMPLOYEE MASTER DATA.xlsx",
+    csv_path="assets/EMPLOYEE MASTER DATA.xlsx - Apr.25.csv",
+    is_master=True
+)
 
 sf11_register_path = "assets/SF-11 Register.xlsx"
-try:
-    sf11_register = pd.read_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM")
-except Exception:
-    sf11_register = pd.read_csv("assets/SF-11 Register.xlsx - SSE-SGAM.csv")
+sf11_register = safe_load_df(
+    excel_path=sf11_register_path,
+    csv_path="assets/SF-11 Register.xlsx - SSE-SGAM.csv",
+    sheet_name="SSE-SGAM"
+)
 
 noc_register_path = "assets/Exam NOC_Report.xlsx"
-try:
-    if os.path.exists(noc_register_path):
-        df_noc = pd.read_excel(noc_register_path)
-    elif os.path.exists("assets/Exam NOC_Report.xlsx - Sheet1.csv"):
-        df_noc = pd.read_csv("assets/Exam NOC_Report.xlsx - Sheet1.csv")
-    else:
-        df_noc = pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
-except Exception:
+df_noc = safe_load_df(
+    excel_path=noc_register_path,
+    csv_path="assets/Exam NOC_Report.xlsx - Sheet1.csv",
+    sheet_name=None 
+)
+if df_noc.empty or "PF Number" not in df_noc.columns:
     df_noc = pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
+    
+# --- End of Robust Global DataFrames Loading ---
 
 
 # --- Helper Functions ---
@@ -260,7 +290,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             "दिनांक": letter_date.strftime("%d-%m-%Y"), "दण्ड का विवरण": context["Memo"]
         }])
         sf11_register = pd.concat([sf11_register, new_entry], ignore_index=True)
-        sf11_register.to_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM", index=False)
+        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
         st.success("SF-11 register updated.")
 
     # --- SF-11 Register Update (For Punishment) ---
@@ -272,7 +302,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             sf11_register.loc[i, "दण्ड का विवरण"] = context["Memo"]
             sf11_register.loc[i, "पावती का दिनांक"] = context["pawati_date"].strftime("%d-%m-%Y")
             sf11_register.loc[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = context["pratyuttar_date"].strftime("%d-%m-%Y")
-            sf11_register.to_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM", index=False)
+            sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
             st.success("SF-11 register updated.")
         else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
@@ -288,7 +318,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
         quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
         quarter_df.loc[i, "STATUS"] = "OCCUPIED"
         
-        quarter_df.to_excel(quarter_file, sheet_sheet_name="Sheet1", index=False)
+        quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
         st.success("Quarter Register updated.")
 
 
@@ -315,8 +345,6 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
                     "Exam Name": exam_name
                 })
             else:
-                # This warning is important, but Streamlit UI might clear it immediately. 
-                # Keeping it for console logs or future UI feedback integration.
                 pass 
 
         if new_noc_entries:
