@@ -10,7 +10,6 @@ from dateutil.relativedelta import relativedelta
 from pathlib import Path
 
 # --- Configuration and Data Loading ---
-# Using Path for better cross-platform compatibility
 BASE_DIR = Path(__file__).parent
 OUTPUT_FOLDER = BASE_DIR / "generated_letters"
 OUTPUT_FOLDER.mkdir(exist_ok=True)
@@ -27,12 +26,10 @@ template_files = {
     "Update Employee Database": None,
     "Engine Pass Letter": "assets/Engine Pass letter temp.docx",
     "Card Pass Letter": "assets/Card Pass letter temp.docx",
-    # --- New PME Memo Template ---
     "PME Memo": "assets/pme_memo_temp.docx"
 }
 
 # --- Global DataFrames (Loaded once on app start) ---
-# Note: These global variables are modified via the update_registers function.
 quarter_file = "assets/QUARTER REGISTER.xlsx"
 try:
     quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
@@ -68,7 +65,6 @@ except Exception:
 def replace_placeholder_in_para(paragraph, context):
     full_text = ''.join(run.text for run in paragraph.runs)
     new_text = full_text
-    # Support both [key] and {{key}} placeholders
     for key, val in context.items():
         val_str = str(val) if val is not None else ""
         new_text = new_text.replace(f"[{key}]", val_str)
@@ -102,33 +98,42 @@ def generate_word(template_path, context, filename):
                 for p in cell.paragraphs:
                     replace_placeholder_in_para(p, context)
 
-    # ✅ Exam NOC Table Insertion (Existing logic preserved)
-    if context.get("LetterType") == "Exam NOC":
+    # ✅ Exam NOC Table Insertion (Updated for Multi-employee)
+    if context.get("LetterType") == "Exam NOC" and context.get("EmployeeData"):
         for i, paragraph in enumerate(doc.paragraphs):
             if "[PFNumber]" in paragraph.text:
                 # Remove placeholder paragraph
                 p = paragraph._element
                 p.getparent().remove(p)
                 p._p = p._element = None
+                
                 # Insert table
-                table = doc.add_table(rows=1, cols=6)
+                table = doc.add_table(rows=1, cols=5)
                 table.style = "Table Grid"
                 table.autofit = True
+                
+                # Table Headers
                 hdr = table.rows[0].cells
-                hdr[0].text = "PF Number"
-                hdr[1].text = "Employee Name"
-                hdr[2].text = "Designation"
-                hdr[3].text = "NOC Year"
-                hdr[4].text = "Application No."
-                hdr[5].text = "Exam Name"
-                row = table.add_row().cells
-                row[0].text = str(context["PFNumberVal"])
-                row[1].text = context["EmployeeName"]
-                row[2].text = context["Designation"]
-                row[3].text = str(context["NOCYear"])
-                row[4].text = str(context["AppNo"])
-                row[5].text = context["ExamName"]
+                hdr[0].text = "Sr. No."
+                hdr[1].text = "PF Number"
+                hdr[2].text = "Employee Name"
+                hdr[3].text = "Designation"
+                hdr[4].text = "Term of NOC"
+                
+                # Add rows for each employee
+                for idx, emp_data in enumerate(context["EmployeeData"]):
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = str(idx + 1)
+                    row_cells[1].text = str(emp_data["PF Number"])
+                    row_cells[2].text = emp_data["Employee Name"]
+                    row_cells[3].text = emp_data["Designation"]
+                    row_cells[4].text = emp_data["Term of NOC"]
+                    
+                # Add Exam Name and NOC Year as separate paragraph after the table for context
+                doc.add_paragraph(f"परीक्षा का नाम (Exam Name): {context['ExamName']}")
+                doc.add_paragraph(f"एनओसी वर्ष (NOC Year): {context['NOCYear']}")
                 break
+    
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
     return output_path
@@ -158,7 +163,6 @@ def parse_date_safe(date_str):
         if isinstance(date_str, pd.Timestamp):
             return date_str.date()
         
-        # Common formats in the user's data: YYYY-MM-DD (from excel), DD-MM-YYYY, MM/DD/YYYY
         formats = ["%Y-%m-%d", "%d-%m-%Y", "%m/%d/%Y", "%Y-%m-%d %H:%M:%S"]
         
         for fmt in formats:
@@ -198,8 +202,7 @@ def get_age_service_length(dob_date, doa_date):
 def render_pme_memo_ui(row):
     st.markdown("#### आवधिक चिकित्सा परीक्षा (PME) मेमो विवरण")
     
-    # Fetch and safely parse initial date values
-    pf_number = row.get("PF No.", "NO_PF")
+    pf_number = str(row.get("PF No.", "NO_PF"))
     dob_date = parse_date_safe(row.get("DOB"))
     doa_date = parse_date_safe(row.get("DOA"))
     
@@ -207,44 +210,35 @@ def render_pme_memo_ui(row):
     initial_pme_due = parse_date_safe(row.get("PME DUE")) or date.today()
     initial_med_cat = str(row.get("Medical category", "A3"))
     
-    # Get other necessary data
     father_name = str(row.get("FATHER'S NAME", "N/A"))
-    designation_hindi = row.get("Designation in Hindi") or row.get("DESIGNATION")
+    designation_hindi = row.get("Designation in Hindi") if pd.notna(row.get("Designation in Hindi")) else row.get("DESIGNATION", "N/A")
 
-    # Calculate Age and Service Length
     age, service_year, service_month = get_age_service_length(dob_date, doa_date)
     
     # --- UI Inputs (Editable) ---
     st.subheader("मेडिकल/ड्यूटी डिटेल्स (आवश्यक)")
     
-    # Editable Last PME Date - Use PF number in key to force re-render on employee change
     last_pme_date = st.date_input("पिछली PME दिनांक (Last PME Date)", value=initial_last_pme, key=f"pme_last_date_{pf_number}")
-    
-    # Editable PME Due Date - Use PF number in key to force re-render on employee change
     pme_due_date = st.date_input("PME ड्यू दिनांक (PME Due Date)", value=initial_pme_due, key=f"pme_due_date_{pf_number}")
-    
-    # Editable Medical Category - Use PF number in key to force re-render on employee change
     med_cat = st.text_input("मेडिकल कैटेगरी (Medical Category)", value=initial_med_cat, key=f"pme_med_cat_{pf_number}")
 
     st.subheader("अन्य मेमो विवरण")
-    # User inputs for memo specifics - Use PF number in key to force re-render on employee change
-    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="NKJ", key=f"pme_last_place_{pf_number}")
-    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS/NKJ", key=f"pme_examiner_{pf_number}")
-    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="", key=f"pme_mark1_{pf_number}")
-    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="", key=f"pme_mark2_{pf_number}")
+    last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key=f"pme_last_place_{pf_number}")
+    examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key=f"pme_examiner_{pf_number}")
+    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key=f"pme_mark1_{pf_number}")
+    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key=f"pme_mark2_{pf_number}")
     
     # --- Context Formatting ---
     
     return {
-        # PME Memo Placeholders
         "dob": format_date_safe(dob_date),
         "doa": format_date_safe(doa_date),
         "name": row.get("Employee Name", ""),
         "age": age,
         "father_name": father_name,
-        "designation": designation_hindi, # FIX: ensures Hindi designation is used for the memo
+        "designation": designation_hindi, 
         "medical_category": med_cat,
-        "last_examined_date": format_date_safe(last_pme_date), # Use edited date
+        "last_examined_date": format_date_safe(last_pme_date),
         "last_place": last_place,
         "examiner": examiner,
         "service_year": service_year,
@@ -256,12 +250,12 @@ def render_pme_memo_ui(row):
     }
 
 # === Register Update Function ===
-def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, count=None, exam_name=None, q_selected=None):
+def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, noc_employees=None, q_selected=None):
     """Handles all logic for updating the global DataFrames and saving them to file."""
-    # Use global variables
     global sf11_register, df_noc, quarter_df 
-
-    # === SF-11 Register Entry (For Other Reason or Duty Letter)
+    
+    # ... (SF-11 and Quarter updates remain the same) ...
+    # --- SF-11 Register Entry (For Other Reason or Duty Letter) ---
     if letter_type in ["SF-11 For Other Reason", "Duty Letter (For Absent)"]:
         new_entry = pd.DataFrame([{
             "पी.एफ. क्रमांक": pf, "कर्मचारी का नाम": hname, "पदनाम": desg, "पत्र क्र.": context["LetterNo"],
@@ -271,7 +265,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
         sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
         st.success("SF-11 register updated.")
 
-    # === SF-11 Register Update (For Punishment)
+    # --- SF-11 Register Update (For Punishment) ---
     if letter_type == "SF-11 Punishment Order" and patra_kr is not None:
         mask = (sf11_register["पी.एफ. क्रमांक"] == pf) & (sf11_register["पत्र क्र."] == patra_kr)
         if mask.any():
@@ -284,20 +278,9 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             st.success("SF-11 register updated.")
         else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
-
-    # === Exam NOC Register Entry
-    if letter_type == "Exam NOC" and count is not None and count < 4:
-        new_noc = {
-            "PF Number": pf, "Employee Name": hname, "Designation": desg, "NOC Year": date.today().year,
-            "Application No.": count + 1, "Exam Name": exam_name
-        }
-        df_noc = pd.concat([df_noc, pd.DataFrame([new_noc])], ignore_index=True)
-        df_noc.to_excel(noc_register_path, index=False)
-        st.success("Exam NOC register updated.")
-        
-    # === Quarter Allotment Register Update
+            
+    # --- Quarter Allotment Register Update ---
     if letter_type == "Quarter Allotment Letter" and q_selected is not None:
-        # Re-read quarter_df display column as it's recreated on each run in the main script body
         temp_quarter_df = quarter_df.copy()
         temp_quarter_df["Display"] = temp_quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
         
@@ -307,34 +290,97 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
         quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
         quarter_df.loc[i, "STATUS"] = "OCCUPIED"
         
-        # Save quarter_df
         quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
         st.success("Quarter Register updated.")
+
+
+    # === Exam NOC Register Entry (Updated for Multi-employee) ===
+    if letter_type == "Exam NOC" and noc_employees is not None and noc_employees:
+        new_noc_entries = []
+        year = date.today().year
+        exam_name = context["ExamName"]
+        term = context["Term"]
+        
+        for emp in noc_employees:
+            pf_num = emp["PF Number"]
+            
+            # Check existing count for the current employee/year
+            df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
+            current_count = df_match.shape[0]
+
+            if current_count < 4:
+                new_noc_entries.append({
+                    "PF Number": pf_num,
+                    "Employee Name": emp["Employee Name"],
+                    "Designation": emp["Designation"],
+                    "NOC Year": year,
+                    "Application No.": current_count + 1,
+                    "Exam Name": exam_name
+                })
+            else:
+                st.warning(f"Employee {emp['Employee Name']} (PF: {pf_num}) has already reached the 4 NOC limit for this year and was skipped.")
+
+        if new_noc_entries:
+            df_noc = pd.concat([df_noc, pd.DataFrame(new_noc_entries)], ignore_index=True)
+            df_noc.to_excel(noc_register_path, index=False)
+            st.success(f"{len(new_noc_entries)} Exam NOC entries added to register.")
 
 
 # === UI ===
 st.title("OFFICE OF THE SSE/PW/SGAM")
 
-# Password protection (using the hardcoded value from user's original script)
 password = st.text_input("Enter Password", type="password")
 if password == "sgam@4321":
     st.success("Access Granted!")
 
     letter_type = st.selectbox("Select Letter Type", list(template_files.keys()))
 
-    # --- Employee Master Data DataFrame (Used for most letters) ---
     master_df = employee_master["Apr.25"]
-    
-    # === Select Employee Logic ===
+    master_df["Display"] = master_df.apply(lambda r: f"{r['PF No.']} - {r['Employee Name']} - {r['UNIT / MUSTER NUMBER']} - {r['DESIGNATION']}", axis=1)
+
     dor_str = ""
     pf = hname = desg = unit_full = unit = short = letter_no = ""
     row = None
     letter_date = date.today()
     patra_kr = None
     q_selected = None
-    count = None # Initialize count for NOC check
+    noc_employees = [] # List to hold data for selected employees for NOC
 
-    if letter_type == "SF-11 Punishment Order":
+    # --- Conditional Employee Selection & Data Fetching ---
+
+    if letter_type == "Exam NOC":
+        # Multi-select for Exam NOC
+        selected_display_names = st.multiselect("Select Employees for NOC", master_df["Display"].dropna())
+        
+        if selected_display_names:
+            # Prepare data for all selected employees
+            selected_rows = master_df[master_df["Display"].isin(selected_display_names)]
+            
+            for index, r in selected_rows.iterrows():
+                hname_val = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+                desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+                
+                noc_employees.append({
+                    "PF Number": r["PF No."],
+                    "Employee Name": hname_val,
+                    "Designation": desg_val
+                })
+            
+            # Use the data of the first selected employee for the general letter context 
+            # (Letter No., Unit, etc.)
+            r = selected_rows.iloc[0]
+            pf = r["PF No."]
+            hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+            desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+            unit_full = str(r["UNIT / MUSTER NUMBER"])
+            unit = unit_full[:2]
+            short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
+            letter_no = f"{short}/{unit}/NOC"
+        
+        letter_date = st.date_input("Letter Date", value=date.today())
+        
+    elif letter_type == "SF-11 Punishment Order":
+        # Single select for Punishment Order
         df = sf11_register
         df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']} - {r['दिनांक']}", axis=1)
         selected = st.selectbox("Select Employee", df["Display"].dropna())
@@ -350,23 +396,35 @@ if password == "sgam@4321":
         letter_no = dandadesh_krmank
         sf11date = row["दिनांक"]
         letter_date = st.date_input("Letter Date", value=date.today())
+        
     elif letter_type == "General Letter" or letter_type == "Update Employee Database":
         letter_date = st.date_input("Letter Date", value=date.today())
-    else: # All other letter types
-        # FIX: Changed 'Designation' to 'DESIGNATION' for correct column access
-        master_df["Display"] = master_df.apply(lambda r: f"{r['PF No.']} - {r['Employee Name']} - {r['UNIT / MUSTER NUMBER']} - {r['DESIGNATION']}", axis=1)
+        
+    elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
+        dor_str = handle_engine_card_pass(letter_type)
         selected = st.selectbox("Select Employee", master_df["Display"].dropna())
         row = master_df[master_df["Display"] == selected].iloc[0]
-        
         pf = row["PF No."]
         hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
-        # FIX: Changed 'Designation' to 'DESIGNATION' for correct column access
         desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
         unit_full = str(row["UNIT / MUSTER NUMBER"])
         unit = unit_full[:2]
         short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
         letter_no = f"{short}/{unit}/{unit}"
         letter_date = st.date_input("Letter Date", value=date.today())
+        
+    else: # Default single select for Duty Letter, Sick Memo, PME Memo, Quarter Allotment
+        selected = st.selectbox("Select Employee", master_df["Display"].dropna())
+        row = master_df[master_df["Display"] == selected].iloc[0]
+        pf = row["PF No."]
+        hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
+        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
+        unit_full = str(row["UNIT / MUSTER NUMBER"])
+        unit = unit_full[:2]
+        short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
+        letter_no = f"{short}/{unit}/{unit}"
+        letter_date = st.date_input("Letter Date", value=date.today())
+
 
     # === Common context for template replacement ===
     context = {
@@ -424,20 +482,28 @@ if password == "sgam@4321":
             [c.strip() for c in copy_input.split(",") if c.strip()]
         ) if copy_input.strip() else ""
 
-    # === Exam NOC UI ===
-    elif letter_type == "Exam NOC" and row is not None:
-        year = date.today().year
-        df_match = df_noc[(df_noc["PF Number"] == pf) & (df_noc["NOC Year"] == year)]
-        count = df_match.shape[0]
-        if count >= 4:
-            st.warning("यह कर्मचारी इस वर्ष पहले ही 4 NOC ले चुका है।")
+    # === Exam NOC UI (Updated for Multi-employee) ===
+    elif letter_type == "Exam NOC":
+        if not noc_employees:
+             st.warning("कृपया ऊपर NOC के लिए कर्मचारी का चयन करें।")
         else:
-            exam_name = st.text_input("Exam Name", key="exam_name")
-            term = st.text_input("Term of NOC", key="noc_term")
+            year = date.today().year
+            exam_name = st.text_input("Exam Name", key="noc_exam_name")
+            term = st.text_input("Term of NOC (e.g., 2024-25)", key="noc_term_input")
+            
             context.update({
-                "PFNumberVal": pf, "EmployeeName": hname, "Designation": desg, "NOCYear": year,
-                "AppNo": count + 1, "ExamName": exam_name, "Term": term, "LetterType": "Exam NOC"
+                "ExamName": exam_name,
+                "Term": term,
+                "NOCYear": year,
+                "LetterType": "Exam NOC",
+                "EmployeeData": [{
+                    "PF Number": emp["PF Number"],
+                    "Employee Name": emp["Employee Name"],
+                    "Designation": emp["Designation"],
+                    "Term of NOC": term # Apply same term to all
+                } for emp in noc_employees]
             })
+
     elif letter_type == "SF-11 Punishment Order" and row is not None:
         st.markdown("#### SF-11 Register से विवरण")
         st.markdown(f"**आरोप का विवरण:** {row.get('आरोप का विवरण', '—')}")
@@ -450,7 +516,7 @@ if password == "sgam@4321":
             "आगामी देय एक सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
             "आगामी देय एक सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
             "आगामी देय दो सेट सुविधा पास तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है।",
-            "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता है."
+            "आगामी देय दो सेट PTO तत्काल प्रभाव से रोके जाने के दंड से दंडित किया जाता."
         ])
         context["Dandadesh"] = letter_no
         context["LetterNo."] = patra_kr
@@ -459,7 +525,6 @@ if password == "sgam@4321":
         context["pawati_date"] = pawati_date
         context["pratyuttar_date"] = pratyuttar_date
         
-    #==Quarter allotment UI==
     elif letter_type == "Quarter Allotment Letter" and row is not None:
         quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
         q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
@@ -472,34 +537,24 @@ if password == "sgam@4321":
             "q_selected": q_selected
         })
 
-    # === PME Memo UI ===
     elif letter_type == "PME Memo" and row is not None:
         pme_context = render_pme_memo_ui(row)
         context.update(pme_context)
 
-    #==Add/ Update Employee UI==
     elif letter_type == "Update Employee Database":
         st.subheader("Update Employee Database")
-        emp_df = master_df
-        headers = list(emp_df.columns)
-        if "Remark" not in emp_df.columns: emp_df["Remark"] = ""
-        date_fields = ["DOB", "DOA", "DOR", "LAST PME", "PME DUE", "PRMOTION DATE", "TRAINING DUE", "LAST TRAINING"]
-        action = st.radio("Select Action", ["Add New Employee", "Update Existing Employee", "Mark as Exited (Transfer)"])
-        
-        # --- Simplified UI Placeholder for Update/Add/Exit Logic ---
-        # The full logic would go here, handling data manipulation on the respective DataFrames
         st.info("The actual Update Employee Database logic is complex and needs to be fully implemented here, followed by saving the master Excel file.")
         
     
     # Generate letter command
     if st.button("Generate Letter"):
-        # The global declaration is no longer needed here as modifications are delegated to update_registers
-        # where 'global' is correctly used in a function scope.
 
         if letter_type == "Update Employee Database":
             st.info("Employee Database update is handled by the dedicated UI section above. No letter generated.")
-        elif row is None and letter_type != "General Letter":
+        elif row is None and letter_type != "General Letter" and letter_type != "Exam NOC":
             st.error("Please select an employee before generating the letter.")
+        elif letter_type == "Exam NOC" and not noc_employees:
+            st.error("Please select at least one employee for the Exam NOC.")
         else:
             # --- Generate the Document ---
             word_path = None
@@ -524,6 +579,12 @@ if password == "sgam@4321":
                 filename = f"QuarterAllotmentLetter-{hname}.docx"
                 word_path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
                 if word_path: download_word(word_path)
+            elif letter_type == "Exam NOC":
+                # NOC file name uses the first employee's PF number for identification
+                filename = f"ExamNOC_Multi-{context['EmployeeData'][0]['PF Number']}-{len(context['EmployeeData'])}.docx"
+                word_path = generate_word(template_files["Exam NOC"], context, filename)
+                if word_path: download_word(word_path)
+                st.success(f"Multi-Employee Exam NOC generated successfully for {len(context['EmployeeData'])} employees.")
             else:
                 filename = f"{letter_type.replace('/', '-')}-{hname}.docx"
                 word_path = generate_word(template_files[letter_type], context, filename)
@@ -540,8 +601,7 @@ if password == "sgam@4321":
                     hname=hname, 
                     desg=desg, 
                     patra_kr=patra_kr, 
-                    count=count, 
-                    exam_name=context.get("ExamName"), 
+                    noc_employees=noc_employees, 
                     q_selected=context.get("q_selected")
                 )
 
