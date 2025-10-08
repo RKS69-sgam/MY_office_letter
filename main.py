@@ -21,6 +21,7 @@ template_files = {
     "Sick Memo": "assets/SICK MEMO temp..docx",
     "General Letter": "assets/General Letter temp.docx",
     "Exam NOC": "assets/Exam NOC Letter temp.docx",
+    "DAR/Vigilance NOC": "assets/DAR NOC temp.docx", # New template added
     "SF-11 Punishment Order": "assets/SF-11 Punishment order temp.docx",
     "Quarter Allotment Letter": "assets/Quarter Allotment temp.docx",
     "Update Employee Database": None,
@@ -140,7 +141,7 @@ def generate_word(template_path, context, filename):
                 table.style = "Table Grid"
                 
                 # Define column widths manually
-                column_widths = [Inches(0.15), Inches(1.0), Inches(1.95), Inches(1.0), Inches(1.75), Inches(0.15)] # Total 6.0 inches
+                column_widths = [Inches(0.5), Inches(1.0), Inches(1.5), Inches(1.0), Inches(1.2), Inches(0.8)] # Total 6.0 inches
                 
                 # Apply column widths and headers
                 hdr = table.rows[0].cells
@@ -165,8 +166,39 @@ def generate_word(template_path, context, filename):
                     row_cells[5].text = emp_data["Term of NOC"] 
                     
                 break # Exit loop once table is inserted
+    
+    # --- 2. SPECIAL CASE: DAR/Vigilance NOC Table Replacement (Runs second, for template table) ---
+    if context.get("LetterType") == "DAR/Vigilance NOC":
+        for table in doc.tables:
+            # Assuming the DAR table is the first table with 5 columns in the template
+            if len(table.columns) >= 5: 
+                # Check if the table contains the placeholders
+                found_placeholders = False
+                for cell in table.rows[1].cells: # Check the second row where data placeholders usually are
+                    if "[Employee Name]" in cell.text:
+                        found_placeholders = True
+                        break
+                
+                if found_placeholders:
+                    # Update the data row (assuming the row index 1 contains the template data)
+                    data_row_cells = table.rows[1].cells
+                    
+                    # Replace placeholders in the existing table cells
+                    # Note: We use raw text replacement here to ensure it works before general replacement
+                    data_row_cells[1].text = context.get("EmployeeName", "")
+                    data_row_cells[2].text = context.get("Designation", "")
+                    data_row_cells[3].text = str(context.get("PFNumber", ""))
+                    data_row_cells[4].text = context.get("DARStatus", "")
+                    
+                    # Important: Update date placeholder in header as general replacement might miss it
+                    for p in doc.paragraphs:
+                        if "[Date]" in p.text:
+                            replace_placeholder_in_para(p, {"Date": context.get("LetterDate", "")})
+                    
+                    break # Exit table loop once the DAR table is processed
 
-    # --- 2. GENERAL PLACEHOLDER REPLACEMENT (Runs second) ---
+
+    # --- 3. GENERAL PLACEHOLDER REPLACEMENT (Runs last) ---
 
     # Replace in paragraphs
     for p in doc.paragraphs:
@@ -269,8 +301,8 @@ def render_pme_memo_ui(row):
     st.subheader("अन्य मेमो विवरण")
     last_place = st.text_input("पिछली परीक्षा का स्थान (Last Exam Place)", value="ACMS/NKJ", key=f"pme_last_place_{pf_number}")
     examiner = st.text_input("डॉक्टर का पदनाम (Examiner Designation)", value="ACMS", key=f"pme_examiner_{pf_number}")
-    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="", key=f"pme_mark1_{pf_number}")
-    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="", key=f"pme_mark2_{pf_number}")
+    first_mark = st.text_input("शारीरिक पहचान चिन्ह 1 (Physical Mark 1)", value="A mole on the left hand.", key=f"pme_mark1_{pf_number}")
+    second_mark = st.text_input("शारीरिक पहचान चिन्ह 2 (Physical Mark 2)", value="A scar on the right elbow.", key=f"pme_mark2_{pf_number}")
     
     # --- Context Formatting ---
     
@@ -292,6 +324,25 @@ def render_pme_memo_ui(row):
         "current_date": date.today().strftime("%d-%m-%Y"),
         "LetterType": "PME Memo"
     }
+    
+# === DAR/Vigilance UI Function ===
+def render_dar_noc_ui():
+    st.markdown("#### DAR/Vigilance NOC विवरण")
+    
+    default_status = "कर्मचारी के विरूद्ध डी.ए.आर. एवं विजिलेंस केश लम्बित नहीं है"
+    
+    dar_status = st.text_area(
+        "डी.ए.आर. एवं विजिलेंस केश की स्थिति", 
+        value=default_status, 
+        height=100, 
+        key="dar_status_input"
+    )
+    
+    return {
+        "DARStatus": dar_status,
+        "LetterType": "DAR/Vigilance NOC"
+    }
+
 
 # === Register Update Function ===
 def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, noc_employees=None, q_selected=None):
@@ -447,6 +498,22 @@ if password == "sgam@4321":
                 letter_no = f"{short}/{unit}/NOC"
         
         letter_date = st.date_input("Letter Date", value=date.today())
+
+    elif letter_type == "DAR/Vigilance NOC":
+        # Single select always for DAR NOC
+        selected = st.selectbox("Select Employee", master_df["Display"].dropna())
+        row = master_df[master_df["Display"] == selected].iloc[0]
+        pf = row["PF No."]
+        hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
+        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
+        unit_full = str(row["UNIT / MUSTER NUMBER"])
+        unit = unit_full[:2]
+        short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
+        letter_no = f"{short}/{unit}/{unit}"
+        letter_date = st.date_input("Letter Date", value=date.today())
+        
+        dar_context = render_dar_noc_ui()
+        context.update(dar_context)
         
     elif letter_type == "SF-11 Punishment Order":
         # Single select for Punishment Order
@@ -506,7 +573,8 @@ if password == "sgam@4321":
         "UnitNumber": unit,
         "LetterNo": letter_no,
         "DutyDate": "", "FromDate": "", "ToDate": "", "JoinDate": "", "Memo": "",
-        "OfficerUnit": "", "Subject": "", "Reference": "", "CopyTo": "", "DOR": dor_str
+        "OfficerUnit": "", "Subject": "", "Reference": "", "CopyTo": "", "DOR": dor_str,
+        "Date": letter_date.strftime("%d-%m-%Y") # For DAR NOC Template
     }
     
     # --- Letter Specific UI ---
@@ -520,7 +588,7 @@ if password == "sgam@4321":
             "ToDate": td.strftime("%d-%m-%Y"),
             "JoinDate": jd.strftime("%d-%m-%Y"),
             "DutyDate": jd.strftime("%d-%m-%Y"),
-            "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
+            "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
         })
     elif letter_type == "SF-11 For Other Reason":
         memo_input = st.text_area("Memo")
@@ -604,6 +672,10 @@ if password == "sgam@4321":
     elif letter_type == "PME Memo" and row is not None:
         pme_context = render_pme_memo_ui(row)
         context.update(pme_context)
+    
+    elif letter_type == "DAR/Vigilance NOC" and row is not None:
+        dar_context = render_dar_noc_ui()
+        context.update(dar_context)
 
     elif letter_type == "Update Employee Database":
         st.subheader("Update Employee Database")
@@ -650,6 +722,11 @@ if password == "sgam@4321":
                 word_path = generate_word(template_files["Exam NOC"], context, filename)
                 if word_path: download_word(word_path)
                 st.success(f"Multi-Employee Exam NOC generated successfully for {len(context['EmployeeData'])} employees.")
+            elif letter_type == "DAR/Vigilance NOC":
+                filename = f"DAR_NOC-{hname}.docx"
+                word_path = generate_word(template_files["DAR/Vigilance NOC"], context, filename)
+                if word_path: download_word(word_path)
+                st.success(f"DAR/Vigilance NOC generated successfully for {hname}.")
             else:
                 filename = f"{letter_type.replace('/', '-')}-{hname}.docx"
                 word_path = generate_word(template_files[letter_type], context, filename)
