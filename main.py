@@ -31,7 +31,7 @@ template_files = {
 
 # --- Robust Global DataFrames Loading ---
 def safe_load_df(excel_path, csv_path=None, sheet_name=None, is_master=False):
-    """Attempts to load DataFrame from Excel, then CSV if Excel fails."""
+    """Attempts to load DataFrame from Excel, then CSV if Excel fails. Returns empty DataFrame on full failure."""
     if csv_path is None:
         csv_path = excel_path.replace(".xlsx", ".xlsx - Sheet1.csv")
 
@@ -39,25 +39,29 @@ def safe_load_df(excel_path, csv_path=None, sheet_name=None, is_master=False):
         # Special handling for employee_master, which is a dictionary of DataFrames
         try:
             return pd.read_excel(excel_path, sheet_name=None)
-        except Exception as e:
-            st.warning(f"Failed to load Excel master data ({excel_path}). Trying CSV fallback...")
+        except Exception:
+            # st.warning(f"Failed to load Excel master data ({excel_path}). Trying CSV fallback...")
             try:
                 # Assuming one main sheet for the master CSV
                 return {"Apr.25": pd.read_csv(csv_path)}
-            except Exception as csv_e:
-                st.error(f"Failed to load Employee Master from CSV: {csv_e}")
+            except Exception:
+                # st.error(f"Failed to load Employee Master from CSV: {csv_e}")
                 return {"Apr.25": pd.DataFrame()}
     else:
         # Standard DataFrame loading
         try:
             return pd.read_excel(excel_path, sheet_name=sheet_name)
-        except Exception as e:
-            st.warning(f"Failed to load Excel data ({excel_path}). Trying CSV fallback...")
+        except Exception:
+            # st.warning(f"Failed to load Excel data ({excel_path}). Trying CSV fallback...")
             try:
-                return pd.read_csv(csv_path)
-            except Exception as csv_e:
-                st.error(f"Failed to load data from CSV: {csv_e}")
-                return pd.DataFrame()
+                if Path(csv_path).exists():
+                     return pd.read_csv(csv_path)
+                else:
+                    # If CSV file path is complicated and doesn't exist, return empty DF
+                    return pd.DataFrame()
+            except Exception:
+                # st.error(f"Failed to load data from CSV: {csv_e}")
+                return pd.DataFrame() # Always return a DataFrame on failure
 
 
 quarter_df = safe_load_df(
@@ -85,6 +89,8 @@ df_noc = safe_load_df(
     csv_path="assets/Exam NOC_Report.xlsx - Sheet1.csv",
     sheet_name=None 
 )
+
+# Line 88 Fix: Ensure df_noc is a DataFrame with expected columns if it's empty
 if df_noc.empty or "PF Number" not in df_noc.columns:
     df_noc = pd.DataFrame(columns=["PF Number", "Employee Name", "Designation", "NOC Year", "Application No.", "Exam Name"])
     
@@ -309,10 +315,16 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             
     # --- Quarter Allotment Register Update ---
     if letter_type == "Quarter Allotment Letter" and q_selected is not None:
-        temp_quarter_df = quarter_df.copy()
-        temp_quarter_df["Display"] = temp_quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
-        
-        i = temp_quarter_df[temp_quarter_df["Display"] == q_selected].index[0]
+        # Check if 'Display' column exists before dropping it (used for selection UI)
+        if 'Display' in quarter_df.columns:
+            temp_quarter_df = quarter_df.copy()
+            temp_quarter_df["Display"] = temp_quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
+            i = temp_quarter_df[temp_quarter_df["Display"] == q_selected].index[0]
+        else:
+            # Fallback (shouldn't happen if loading is correct)
+            i = quarter_df[quarter_df['QUARTER NO.'] == q_selected.split(" - ")[1]].index[0]
+
+
         quarter_df.loc[i, "PF No."] = pf
         quarter_df.loc[i, "EMPLOYEE NAME"] = hname
         quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
@@ -562,16 +574,22 @@ if password == "sgam@4321":
         context["pratyuttar_date"] = pratyuttar_date
         
     elif letter_type == "Quarter Allotment Letter" and row is not None:
-        quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
-        q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
-        qrow = quarter_df[quarter_df["Display"] == q_selected].iloc[0]
-        station = qrow["STATION"]
-        qno = qrow["QUARTER NO."]
-        context.update({
-            "QuarterNo.": qno,
-            "Station": station,
-            "q_selected": q_selected
-        })
+        # NOTE: Using try-except block here because quarter_df may not have all columns initially
+        try:
+            quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
+            q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
+            qrow = quarter_df[quarter_df["Display"] == q_selected].iloc[0]
+            station = qrow["STATION"]
+            qno = qrow["QUARTER NO."]
+            context.update({
+                "QuarterNo.": qno,
+                "Station": station,
+                "q_selected": q_selected
+            })
+        except Exception as e:
+            st.warning(f"Quarter selection failed: {e}. Ensure QUARTER REGISTER data integrity.")
+            q_selected = None
+
 
     elif letter_type == "PME Memo" and row is not None:
         pme_context = render_pme_memo_ui(row)
