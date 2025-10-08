@@ -131,9 +131,6 @@ def generate_word(template_path, context, filename):
     # Logic for both Exam NOC and DAR/Vigilance NOC
     if context.get("LetterType") in ["Exam NOC", "DAR/Vigilance NOC"] and context.get("EmployeeData"):
         for i, paragraph in enumerate(doc.paragraphs):
-            # The placeholder is [PFNumber] in Exam NOC and [PFNumber] (inside a table) in DAR NOC.
-            # We look for a phrase that is uniquely present right before the data table in the DAR NOC template
-            # For simplicity, we use the DAR NOC table structure assumption
             
             # --- Handle DAR NOC Table Replacement ---
             if context.get("LetterType") == "DAR/Vigilance NOC":
@@ -142,20 +139,19 @@ def generate_word(template_path, context, filename):
                     # Find and remove the existing table (which contains placeholder data)
                     table_to_remove = None
                     try:
-                        # Assuming the DAR table is the immediate next table
-                        table_to_remove = doc.tables[0] # Usually the first table after the body text
-                        
-                        # Verify the table structure before removing
-                        if len(table_to_remove.columns) >= 5 and "पी.एफ. क्रमांक" in table_to_remove.rows[0].cells[3].text:
+                        # Assuming the DAR table is the first table with 5 columns in the template
+                        # We must rely on table position relative to the text
+                        if doc.tables and len(doc.tables[0].columns) >= 5 and "पी.एफ. क्रमांक" in doc.tables[0].rows[0].cells[3].text:
+                             table_to_remove = doc.tables[0]
                              table_to_remove._element.getparent().remove(table_to_remove._element)
-                        else:
-                            table_to_remove = None # Don't remove if structure is wrong
+                        
                     except IndexError:
                         pass
                     
                     # Insert the new table right after the introductory paragraph
                     p = paragraph._element
-                    p.getparent().remove(p) # Remove the introductory paragraph to make space
+                    # We remove the paragraph containing the target_phrase since we are rewriting it
+                    p.getparent().remove(p) 
                     
                     # Insert new paragraph before table to hold the final text
                     doc.add_paragraph(target_phrase) 
@@ -359,10 +355,11 @@ def render_dar_noc_ui(employees_data):
     default_status = "कर्मचारी के विरूद्ध डी.ए.आर. एवं विजिलेंस केश लम्बित नहीं है"
     updated_employees = []
     
-    for r in employees_data:
-        pf_num = str(r["PF No."])
-        employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
-        desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+    for r in employees_data.itertuples():
+        # Access properties using attribute access for safety in itertuples
+        pf_num = str(getattr(r, "PF No."))
+        employee_name = getattr(r, "Employee Name in Hindi") if pd.notna(getattr(r, "Employee Name in Hindi")) else getattr(r, "Employee Name")
+        desg_val = getattr(r, "Designation in Hindi") if pd.notna(getattr(r, "Designation in Hindi")) else getattr(r, "DESIGNATION")
         
         st.markdown(f"**{employee_name} ({pf_num})**")
         
@@ -506,7 +503,7 @@ if password == "sgam@4321":
                 desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
                 
                 year = date.today().year
-                df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
+                df_match = df_noc[(df_noc["PF No."] == pf_num) & (df_noc["NOC Year"] == year)]
                 current_count = df_match.shape[0]
 
                 if current_count >= 4:
@@ -636,7 +633,7 @@ if password == "sgam@4321":
             })
         elif letter_type == "SF-11 For Other Reason":
             memo_input = st.text_area("Memo")
-            context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
+            context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
         elif letter_type == "General Letter":
             context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
             officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
@@ -678,7 +675,7 @@ if password == "sgam@4321":
                 context.update({
                     "LetterType": "DAR/Vigilance NOC",
                     "EmployeeData": dar_employees,
-                    # Fallback context using first employee for general placeholders (not used in table generation)
+                    # Fallback context using first employee for general placeholders 
                     "DARStatus": dar_employees[0]["DARStatus"] 
                 })
 
