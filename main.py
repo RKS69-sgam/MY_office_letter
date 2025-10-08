@@ -125,19 +125,10 @@ def generate_word(template_path, context, filename):
         st.error(f"Error loading template {template_path}: {e}")
         return None
         
-    # Replace in paragraphs
-    for p in doc.paragraphs:
-        replace_placeholder_in_para(p, context)
-    # Replace in table cells
-    for table in doc.tables:
-        for row in table.rows:
-            for cell in row.cells:
-                for p in cell.paragraphs:
-                    replace_placeholder_in_para(p, context)
-
-    # ✅ Exam NOC Table Insertion (Updated for individual inputs and accurate columns)
+    # --- 1. SPECIAL CASE: Exam NOC Table Insertion (Run FIRST) ---
     if context.get("LetterType") == "Exam NOC" and context.get("EmployeeData"):
         for i, paragraph in enumerate(doc.paragraphs):
+            # Find the specific placeholder paragraph
             if "[PFNumber]" in paragraph.text:
                 # Remove placeholder paragraph
                 p = paragraph._element
@@ -168,7 +159,19 @@ def generate_word(template_path, context, filename):
                     row_cells[4].text = emp_data["Exam Name"] 
                     row_cells[5].text = emp_data["Term of NOC"] 
                     
-                break
+                break # Exit loop once table is inserted
+
+    # --- 2. GENERAL PLACEHOLDER REPLACEMENT (Runs second) ---
+
+    # Replace in paragraphs
+    for p in doc.paragraphs:
+        replace_placeholder_in_para(p, context)
+    # Replace in table cells (for tables already existing in the template)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for p in cell.paragraphs:
+                    replace_placeholder_in_para(p, context)
     
     output_path = os.path.join("generated_letters", filename)
     doc.save(output_path)
