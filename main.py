@@ -382,8 +382,13 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             i = temp_quarter_df[temp_quarter_df["Display"] == q_selected].index[0]
         else:
             # Fallback (shouldn't happen if loading is correct)
-            i = quarter_df[quarter_df['QUARTER NO.'] == q_selected.split(" - ")[1]].index[0]
-
+            # Find the row index using QUARTER NO.
+            try:
+                q_no = q_selected.split(" - ")[1] if " - " in q_selected else q_selected
+                i = quarter_df[quarter_df['QUARTER NO.'] == q_no].index[0]
+            except IndexError:
+                 st.error("Could not find quarter in register for update.")
+                 return
 
         quarter_df.loc[i, "PF No."] = pf
         quarter_df.loc[i, "EMPLOYEE NAME"] = hname
@@ -447,6 +452,7 @@ if password == "sgam@4321":
 
     # --- Conditional Employee Selection & Data Fetching ---
 
+    # --- Multiple Employee Selection for NOC ---
     if letter_type == "Exam NOC":
         selected_display_names = st.multiselect("Select Employees for NOC", master_df["Display"].dropna())
         
@@ -460,7 +466,6 @@ if password == "sgam@4321":
                 employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
                 desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
                 
-                # Check for existing NOC limit (optional check, main check is in update_registers)
                 year = date.today().year
                 df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
                 current_count = df_match.shape[0]
@@ -471,7 +476,6 @@ if password == "sgam@4321":
 
                 st.markdown(f"**{employee_name} ({pf_num})**")
                 
-                # Individual Inputs for Exam Name and Term
                 exam_name = st.text_input(f"Exam Name (Current Count: {current_count})", key=f"exam_name_{pf_num}", 
                                           placeholder="Enter Exam Name")
                 term = st.text_input(f"Term of NOC", key=f"noc_term_{pf_num}", 
@@ -486,8 +490,8 @@ if password == "sgam@4321":
                         "Term of NOC": term
                     })
             
-            # Use the data of the first selected employee for the general letter context
             if not selected_rows.empty:
+                # Use the data of the first selected employee for the general letter context
                 r = selected_rows.iloc[0]
                 pf = r["PF No."]
                 hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
@@ -499,8 +503,8 @@ if password == "sgam@4321":
         
         letter_date = st.date_input("Letter Date", value=date.today())
 
+    # --- Single Employee Selection for DAR NOC ---
     elif letter_type == "DAR/Vigilance NOC":
-        # Single select always for DAR NOC
         selected = st.selectbox("Select Employee", master_df["Display"].dropna())
         row = master_df[master_df["Display"] == selected].iloc[0]
         pf = row["PF No."]
@@ -515,8 +519,8 @@ if password == "sgam@4321":
         dar_context = render_dar_noc_ui()
         context.update(dar_context)
         
+    # --- Single Employee Selection for SF-11 Punishment Order ---
     elif letter_type == "SF-11 Punishment Order":
-        # Single select for Punishment Order
         df = sf11_register
         df["Display"] = df.apply(lambda r: f"{r['पी.एफ. क्रमांक']} - {r['कर्मचारी का नाम']} - {r['पत्र क्र.']} - {r['दिनांक']}", axis=1)
         selected = st.selectbox("Select Employee", df["Display"].dropna())
@@ -533,23 +537,12 @@ if password == "sgam@4321":
         sf11date = row["दिनांक"]
         letter_date = st.date_input("Letter Date", value=date.today())
         
+    # --- No Employee Selection ---
     elif letter_type == "General Letter" or letter_type == "Update Employee Database":
         letter_date = st.date_input("Letter Date", value=date.today())
         
-    elif letter_type in ["Engine Pass Letter", "Card Pass Letter"]:
-        dor_str = handle_engine_card_pass(letter_type)
-        selected = st.selectbox("Select Employee", master_df["Display"].dropna())
-        row = master_df[master_df["Display"] == selected].iloc[0]
-        pf = row["PF No."]
-        hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
-        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
-        unit_full = str(row["UNIT / MUSTER NUMBER"])
-        unit = unit_full[:2]
-        short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
-        letter_no = f"{short}/{unit}/{unit}"
-        letter_date = st.date_input("Letter Date", value=date.today())
-        
-    else: # Default single select for Duty Letter, Sick Memo, PME Memo, Quarter Allotment
+    # --- Default Single Employee Selection (Other Letter Types) ---
+    else: 
         selected = st.selectbox("Select Employee", master_df["Display"].dropna())
         row = master_df[master_df["Display"] == selected].iloc[0]
         pf = row["PF No."]
@@ -563,22 +556,29 @@ if password == "sgam@4321":
 
 
     # === Common context for template replacement ===
-    context = {
-        "LetterDate": letter_date.strftime("%d-%m-%Y"),
-        "EmployeeName": hname,
-        "Designation": desg,
-        "PFNumber": pf,
-        "ShortName": short,
-        "Unit": unit,
-        "UnitNumber": unit,
-        "LetterNo": letter_no,
-        "DutyDate": "", "FromDate": "", "ToDate": "", "JoinDate": "", "Memo": "",
-        "OfficerUnit": "", "Subject": "", "Reference": "", "CopyTo": "", "DOR": dor_str,
-        "Date": letter_date.strftime("%d-%m-%Y") # For DAR NOC Template
-    }
+    # Re-initialize context to ensure it contains all necessary fields based on the selected employee/type
+    # This prevents the 'NoneType' error if row was not set in a previous block.
+    if row is not None or letter_type in ["General Letter", "Exam NOC"]:
+        context = {
+            "LetterDate": letter_date.strftime("%d-%m-%Y"),
+            "EmployeeName": hname,
+            "Designation": desg,
+            "PFNumber": pf,
+            "ShortName": short,
+            "Unit": unit,
+            "UnitNumber": unit,
+            "LetterNo": letter_no,
+            "DutyDate": "", "FromDate": "", "ToDate": "", "JoinDate": "", "Memo": "",
+            "OfficerUnit": "", "Subject": "", "Reference": "", "CopyTo": "", "DOR": dor_str,
+            "Date": letter_date.strftime("%d-%m-%Y") # For DAR NOC Template
+        }
+    else:
+        # Fallback if employee selection failed unexpectedly
+        context = {} # Ensure context is at least an empty dict to prevent errors if passed to generate_word.
     
-    # --- Letter Specific UI ---
-    if letter_type == "Duty Letter (For Absent)":
+    # --- Letter Specific Context Updates (Apply after Common Context is initialized) ---
+    
+    if letter_type == "Duty Letter (For Absent)" and row is not None:
         mode = st.selectbox("Mode", ["SF-11 & Duty Letter Only", "Duty Letter Only"])
         fd = st.date_input("From Date")
         td = st.date_input("To Date", value=date.today())
@@ -588,9 +588,9 @@ if password == "sgam@4321":
             "ToDate": td.strftime("%d-%m-%Y"),
             "JoinDate": jd.strftime("%d-%m-%Y"),
             "DutyDate": jd.strftime("%d-%m-%Y"),
-            "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
+            "Memo": f"आप बिना किसी पूर्व सूचना के दिनांक {fd.strftime('%d-%m-%Y')} से {td.strftime('%d-%m-%Y')} तक कुल {(td-fd).days+1} दिवस कार्य से अनुपस्थित थे, जो कि रेल सेवक होने के नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
         })
-    elif letter_type == "SF-11 For Other Reason":
+    elif letter_type == "SF-11 For Other Reason" and row is not None:
         memo_input = st.text_area("Memo")
         context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
     elif letter_type == "General Letter":
@@ -621,9 +621,8 @@ if password == "sgam@4321":
 
     elif letter_type == "Exam NOC":
         if noc_employees:
-            # Additional context specific to NOC processing is added here.
             context.update({
-                "ExamName": noc_employees[0]["Exam Name"], # Using first employee data for top-level context (for filename/general placeholders)
+                "ExamName": noc_employees[0]["Exam Name"], 
                 "Term": noc_employees[0]["Term of NOC"],
                 "NOCYear": date.today().year,
                 "LetterType": "Exam NOC",
@@ -652,7 +651,6 @@ if password == "sgam@4321":
         context["pratyuttar_date"] = pratyuttar_date
         
     elif letter_type == "Quarter Allotment Letter" and row is not None:
-        # NOTE: Using try-except block here because quarter_df may not have all columns initially
         try:
             quarter_df["Display"] = quarter_df.apply(lambda r: f"{r['STATION']} - {r['QUARTER NO.']}", axis=1)
             q_selected = st.selectbox("Select Quarter", quarter_df["Display"].dropna())
@@ -674,9 +672,9 @@ if password == "sgam@4321":
         context.update(pme_context)
     
     elif letter_type == "DAR/Vigilance NOC" and row is not None:
-        dar_context = render_dar_noc_ui()
-        context.update(dar_context)
-
+        # Context was updated during selection flow
+        pass
+    
     elif letter_type == "Update Employee Database":
         st.subheader("Update Employee Database")
         st.info("The actual Update Employee Database logic is complex and needs to be fully implemented here, followed by saving the master Excel file.")
@@ -691,6 +689,8 @@ if password == "sgam@4321":
             st.error("Please select an employee before generating the letter.")
         elif letter_type == "Exam NOC" and not noc_employees:
             st.error("Please select at least one employee for the Exam NOC and fill in the details.")
+        elif not context:
+             st.error("Cannot generate letter: Context data is missing. Please ensure employee master data is loaded correctly.")
         else:
             # --- Generate the Document ---
             word_path = None
@@ -716,7 +716,6 @@ if password == "sgam@4321":
                 word_path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
                 if word_path: download_word(word_path)
             elif letter_type == "Exam NOC":
-                # Assuming first employee is representative for filename
                 pf_for_name = context['EmployeeData'][0]['PF Number']
                 filename = f"ExamNOC_Multi-{pf_for_name}-{len(context['EmployeeData'])}.docx"
                 word_path = generate_word(template_files["Exam NOC"], context, filename)
