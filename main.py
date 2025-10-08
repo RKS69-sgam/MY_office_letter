@@ -126,11 +126,69 @@ def generate_word(template_path, context, filename):
         st.error(f"Error loading template {template_path}: {e}")
         return None
         
-    # --- 1. SPECIAL CASE: Exam NOC Table Insertion (Run FIRST) ---
-    if context.get("LetterType") == "Exam NOC" and context.get("EmployeeData"):
+    # --- 1. SPECIAL CASE: Table Insertion (Exam NOC & DAR/Vigilance NOC) (Run FIRST) ---
+    
+    # Logic for both Exam NOC and DAR/Vigilance NOC
+    if context.get("LetterType") in ["Exam NOC", "DAR/Vigilance NOC"] and context.get("EmployeeData"):
         for i, paragraph in enumerate(doc.paragraphs):
-            # Find the specific placeholder paragraph
-            if "[PFNumber]" in paragraph.text:
+            # The placeholder is [PFNumber] in Exam NOC and [PFNumber] (inside a table) in DAR NOC.
+            # We look for a phrase that is uniquely present right before the data table in the DAR NOC template
+            # For simplicity, we use the DAR NOC table structure assumption
+            
+            # --- Handle DAR NOC Table Replacement ---
+            if context.get("LetterType") == "DAR/Vigilance NOC":
+                target_phrase = "उपरोक्त विषयानुसार इस डिपो के अधीन पदस्‍थ निम्‍नलिखित कर्मचारी का डी.ए.आर. एवं विजिलेंस केश की जानकारी निम्‍नानुसार तैयार कर प्रतिवेदन अग्रिम कार्यवाही हेतु सादर प्रेषित है"
+                if target_phrase in paragraph.text:
+                    # Find and remove the existing table (which contains placeholder data)
+                    table_to_remove = None
+                    try:
+                        # Assuming the DAR table is the immediate next table
+                        table_to_remove = doc.tables[0] # Usually the first table after the body text
+                        
+                        # Verify the table structure before removing
+                        if len(table_to_remove.columns) >= 5 and "पी.एफ. क्रमांक" in table_to_remove.rows[0].cells[3].text:
+                             table_to_remove._element.getparent().remove(table_to_remove._element)
+                        else:
+                            table_to_remove = None # Don't remove if structure is wrong
+                    except IndexError:
+                        pass
+                    
+                    # Insert the new table right after the introductory paragraph
+                    p = paragraph._element
+                    p.getparent().remove(p) # Remove the introductory paragraph to make space
+                    
+                    # Insert new paragraph before table to hold the final text
+                    doc.add_paragraph(target_phrase) 
+                    
+                    table = doc.add_table(rows=1, cols=5)
+                    table.style = "Table Grid"
+                    
+                    # Define column widths manually for DAR NOC
+                    column_widths = [Inches(0.5), Inches(1.5), Inches(1.0), Inches(1.0), Inches(2.5)] # Total 6.5 inches
+                    
+                    hdr = table.rows[0].cells
+                    for col_idx, width in enumerate(column_widths):
+                        table.columns[col_idx].width = width
+                    
+                    hdr[0].text = "स. क्र."
+                    hdr[1].text = "कर्मचारी का नाम"
+                    hdr[2].text = "पदनाम"
+                    hdr[3].text = "पी.एफ. क्रमांक" 
+                    hdr[4].text = "डी.ए.आर. एवं विजिलेंस केश की स्थिति"
+                    
+                    # Add rows for each employee
+                    for idx, emp_data in enumerate(context["EmployeeData"]):
+                        row_cells = table.add_row().cells
+                        row_cells[0].text = str(idx + 1)
+                        row_cells[1].text = emp_data["Employee Name"]
+                        row_cells[2].text = emp_data["Designation"]
+                        row_cells[3].text = str(emp_data["PF Number"])
+                        row_cells[4].text = emp_data["DARStatus"]
+                        
+                    break # Exit loop once DAR table is inserted
+            
+            # --- Handle Exam NOC Table Replacement ---
+            elif context.get("LetterType") == "Exam NOC" and "[PFNumber]" in paragraph.text:
                 # Remove placeholder paragraph
                 p = paragraph._element
                 p.getparent().remove(p)
@@ -167,42 +225,7 @@ def generate_word(template_path, context, filename):
                     
                 break # Exit loop once table is inserted
     
-    # --- 2. SPECIAL CASE: DAR/Vigilance NOC Table Replacement (Runs second, for template table) ---
-    if context.get("LetterType") == "DAR/Vigilance NOC":
-        for table in doc.tables:
-            # Assuming the DAR table is the first table with 5 columns in the template
-            if len(table.columns) >= 5: 
-                # Check if the table contains the placeholders
-                found_placeholders = False
-                # Check row 1 (index 1) for placeholders as it's the data row
-                for cell in table.rows[1].cells: 
-                    if "[Employee Name]" in cell.text or "[DARStatus]" in cell.text:
-                        found_placeholders = True
-                        break
-                
-                if found_placeholders:
-                    # Replace placeholders in the existing table cells (row index 1)
-                    data_row_cells = table.rows[1].cells
-                    
-                    # Note: We use context.get() for safety
-                    data_row_cells[1].text = context.get("EmployeeName", "")
-                    data_row_cells[2].text = context.get("Designation", "")
-                    data_row_cells[3].text = str(context.get("PFNumber", ""))
-                    data_row_cells[4].text = context.get("DARStatus", "")
-                    
-                    # Delete the extra placeholder in data_row_cells[0] if present (e.g., "[Employee Name]")
-                    if "[Employee Name]" in data_row_cells[0].text:
-                        data_row_cells[0].text = "1"
-                    
-                    # Update date placeholder in header as general replacement might miss it
-                    for p in doc.paragraphs:
-                        if "[Date]" in p.text:
-                            replace_placeholder_in_para(p, {"Date": context.get("LetterDate", "")})
-                    
-                    break # Exit table loop once the DAR table is processed
-
-
-    # --- 3. GENERAL PLACEHOLDER REPLACEMENT (Runs last) ---
+    # --- 2. GENERAL PLACEHOLDER REPLACEMENT (Runs last) ---
 
     # Replace in paragraphs
     for p in doc.paragraphs:
@@ -329,24 +352,35 @@ def render_pme_memo_ui(row):
         "LetterType": "PME Memo"
     }
     
-# === DAR/Vigilance UI Function ===
-def render_dar_noc_ui():
-    st.markdown("#### DAR/Vigilance NOC विवरण")
+# === DAR/Vigilance UI Function (Updated for Multi-Employee) ===
+def render_dar_noc_ui(employees_data):
+    st.markdown("### DAR/Vigilance स्टेटस (Individual Status)")
     
     default_status = "कर्मचारी के विरूद्ध डी.ए.आर. एवं विजिलेंस केश लम्बित नहीं है"
+    updated_employees = []
     
-    dar_status = st.text_area(
-        "डी.ए.आर. एवं विजिलेंस केश की स्थिति", 
-        value=default_status, 
-        height=100, 
-        key="dar_status_input"
-    )
-    
-    return {
-        "DARStatus": dar_status,
-        "LetterType": "DAR/Vigilance NOC"
-    }
-
+    for r in employees_data:
+        pf_num = str(r["PF No."])
+        employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+        desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+        
+        st.markdown(f"**{employee_name} ({pf_num})**")
+        
+        dar_status = st.text_area(
+            f"DAR/Vigilance Status for {pf_num}", 
+            value=default_status, 
+            height=80, 
+            key=f"dar_status_input_{pf_num}"
+        )
+        
+        updated_employees.append({
+            "PF Number": pf_num,
+            "Employee Name": employee_name,
+            "Designation": desg_val,
+            "DARStatus": dar_status
+        })
+        
+    return updated_employees
 
 # === Register Update Function ===
 def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_kr=None, noc_employees=None, q_selected=None):
@@ -452,11 +486,12 @@ if password == "sgam@4321":
     letter_date = date.today()
     patra_kr = None
     q_selected = None
-    noc_employees = [] # List to hold data for selected employees for NOC
+    noc_employees = [] # List to hold data for selected employees for Exam NOC
+    dar_employees = [] # List to hold data for selected employees for DAR NOC
 
     # --- Conditional Employee Selection & Data Fetching ---
 
-    # --- Multiple Employee Selection for NOC ---
+    # --- Multiple Employee Selection for Exam NOC ---
     if letter_type == "Exam NOC":
         selected_display_names = st.multiselect("Select Employees for NOC", master_df["Display"].dropna())
         
@@ -495,7 +530,6 @@ if password == "sgam@4321":
                     })
             
             if not selected_rows.empty:
-                # Use the data of the first selected employee for the general letter context
                 r = selected_rows.iloc[0]
                 pf = r["PF No."]
                 hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
@@ -507,23 +541,29 @@ if password == "sgam@4321":
         
         letter_date = st.date_input("Letter Date", value=date.today())
 
-    # --- Single Employee Selection for DAR NOC ---
+    # --- Multiple Employee Selection for DAR NOC ---
     elif letter_type == "DAR/Vigilance NOC":
-        selected = st.selectbox("Select Employee", master_df["Display"].dropna())
-        row = master_df[master_df["Display"] == selected].iloc[0]
-        pf = row["PF No."]
-        hname = row["Employee Name in Hindi"] if pd.notna(row["Employee Name in Hindi"]) else row["Employee Name"]
-        desg = row["Designation in Hindi"] if pd.notna(row["Designation in Hindi"]) else row["DESIGNATION"]
-        unit_full = str(row["UNIT / MUSTER NUMBER"])
-        unit = unit_full[:2]
-        short = row["SF-11 short name"] if pd.notna(row["SF-11 short name"]) else "STF"
-        letter_no = f"{short}/{unit}/{unit}"
+        selected_display_names = st.multiselect("Select Employees for DAR/Vigilance NOC", master_df["Display"].dropna())
+        
+        if selected_display_names:
+            selected_rows = master_df[master_df["Display"].isin(selected_display_names)]
+            
+            # Use the data of all selected employees to render the UI
+            dar_employees = render_dar_noc_ui(selected_rows)
+            
+            if not selected_rows.empty:
+                # Use the data of the first selected employee for the general letter context
+                r = selected_rows.iloc[0]
+                pf = r["PF No."]
+                hname = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
+                desg = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
+                unit_full = str(r["UNIT / MUSTER NUMBER"])
+                unit = unit_full[:2]
+                short = r["SF-11 short name"] if pd.notna(r["SF-11 short name"]) else "STF"
+                letter_no = f"{short}/{unit}/{unit}"
+        
         letter_date = st.date_input("Letter Date", value=date.today())
         
-        # NOTE: render_dar_noc_ui is called here, and its output is stored in dar_context
-        dar_context = render_dar_noc_ui()
-        # The update is deferred to the main context initialization block below
-
     # --- Single Employee Selection for SF-11 Punishment Order ---
     elif letter_type == "SF-11 Punishment Order":
         df = sf11_register
@@ -561,10 +601,8 @@ if password == "sgam@4321":
 
 
     # === Common context initialization and update ===
-    # Initialize context safely as an empty dictionary
     context = {} 
 
-    # Only attempt to initialize full context if a single employee row or special case (NOC/General) is available
     if row is not None or letter_type in ["General Letter", "Exam NOC", "DAR/Vigilance NOC"]:
         
         # Base Context Initialization
@@ -598,7 +636,7 @@ if password == "sgam@4321":
             })
         elif letter_type == "SF-11 For Other Reason":
             memo_input = st.text_area("Memo")
-            context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है।"
+            context["Memo"] = memo_input + " जो कि रेल सेवक होने नाते आपकी रेल सेवा निष्ठा के प्रति घोर लापरवाही को प्रदर्शित करता है। अतः आप कामों व भूलो के फेहरिस्त धारा 1, 2 एवं 3 के उल्लंघन के दोषी पाए जाते है。"
         elif letter_type == "General Letter":
             context["FileName"] = st.selectbox("File Name", ["", "STAFF-IV", "OFFICE ORDER", "STAFF-III", "QAURTER-1", "ARREAR", "CEA/STAFF-IV", "CEA/STAFF-III", "PW-SGAM", "MISC."])
             officer_option = st.selectbox("अधिकारी/कर्मचारी", ["", "सहायक मण्‍डल अभियंता", "मण्‍डल अभिंयता (पूर्व)","मुख्‍य चिकित्‍सा अधीक्षक", "मण्‍डल अभिंयता (पश्चिम)", "मण्‍डल रेल प्रबंधक (कार्मिक)", "मण्‍डल रेल प्रबंधक (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (रेल पथ)", "वरिष्‍ठ खण्‍ड अभियंता (कार्य)", "वरिष्‍ठ खण्‍ड अभियंता (विद्युत)", "वरिष्‍ठ खण्‍ड अभियंता (T&D)", "वरिष्‍ठ खण्‍ड अभियंता (S&T)", "वरिष्‍ठ खण्‍ड अभियंता (USFD)", "वरिष्‍ठ खण्‍ड अभियंता (PW/STORE)", "कनिष्‍ठ अभियंता (रेल पथ)", "कनिष्‍ठ अभियंता (कार्य)", "कनिष्‍ठ अभियंता (विद्युत)", "कनिष्‍ठ अभियंता (T&D)", "कनिष्‍ठ अभियंता (S&T)", "शाखा सचिव (WCRMS)", "मण्‍डल अध्‍यक्ष (WCRMS)", "मण्‍डल सचिव (WCRMS)", "महामंत्री (WCRMS)", "अन्‍य"])
@@ -634,6 +672,16 @@ if password == "sgam@4321":
                     "LetterType": "Exam NOC",
                     "EmployeeData": noc_employees
                 })
+
+        elif letter_type == "DAR/Vigilance NOC":
+            if dar_employees:
+                context.update({
+                    "LetterType": "DAR/Vigilance NOC",
+                    "EmployeeData": dar_employees,
+                    # Fallback context using first employee for general placeholders (not used in table generation)
+                    "DARStatus": dar_employees[0]["DARStatus"] 
+                })
+
 
         elif letter_type == "SF-11 Punishment Order" and row is not None:
             pawati_date = st.date_input("पावती का दिनांक", value=date.today())
@@ -673,25 +721,19 @@ if password == "sgam@4321":
         elif letter_type == "PME Memo" and row is not None:
             pme_context = render_pme_memo_ui(row)
             context.update(pme_context)
-        
-        elif letter_type == "DAR/Vigilance NOC" and row is not None:
-            # We already called render_dar_noc_ui and stored the result in dar_context
-            # Now, safely update the context
-            if 'dar_context' in locals():
-                context.update(dar_context)
-            
-        # Add logic for Engine/Card Pass here if needed
-
+    
     
     # Generate letter command
     if st.button("Generate Letter"):
 
         if letter_type == "Update Employee Database":
             st.info("Employee Database update is handled by the dedicated UI section above. No letter generated.")
-        elif row is None and letter_type not in ["General Letter", "Exam NOC"]:
+        elif row is None and letter_type not in ["General Letter", "Exam NOC", "DAR/Vigilance NOC"]:
             st.error("Please select an employee before generating the letter.")
         elif letter_type == "Exam NOC" and not noc_employees:
             st.error("Please select at least one employee for the Exam NOC and fill in the details.")
+        elif letter_type == "DAR/Vigilance NOC" and not dar_employees:
+            st.error("Please select at least one employee for the DAR/Vigilance NOC and fill in the details.")
         elif not context:
              st.error("Cannot generate letter: Context data is missing. Please ensure employee master data is loaded correctly.")
         else:
@@ -725,10 +767,11 @@ if password == "sgam@4321":
                 if word_path: download_word(word_path)
                 st.success(f"Multi-Employee Exam NOC generated successfully for {len(context['EmployeeData'])} employees.")
             elif letter_type == "DAR/Vigilance NOC":
-                filename = f"DAR_NOC-{hname}.docx"
+                pf_for_name = context['EmployeeData'][0]['PF Number']
+                filename = f"DAR_NOC_Multi-{pf_for_name}-{len(context['EmployeeData'])}.docx"
                 word_path = generate_word(template_files["DAR/Vigilance NOC"], context, filename)
                 if word_path: download_word(word_path)
-                st.success(f"DAR/Vigilance NOC generated successfully for {hname}.")
+                st.success(f"Multi-Employee DAR/Vigilance NOC generated successfully for {len(context['EmployeeData'])} employees.")
             else:
                 filename = f"{letter_type.replace('/', '-')}-{hname}.docx"
                 word_path = generate_word(template_files[letter_type], context, filename)
