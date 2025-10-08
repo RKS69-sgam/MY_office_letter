@@ -138,10 +138,15 @@ def generate_word(template_path, context, filename):
                 # Insert table
                 table = doc.add_table(rows=1, cols=6)
                 table.style = "Table Grid"
-                table.autofit = True
                 
-                # Table Headers
+                # Define column widths manually
+                column_widths = [Inches(0.5), Inches(1.0), Inches(1.5), Inches(1.0), Inches(1.2), Inches(0.8)] # Total 6.0 inches
+                
+                # Apply column widths and headers
                 hdr = table.rows[0].cells
+                for col_idx, width in enumerate(column_widths):
+                    table.columns[col_idx].width = width
+                
                 hdr[0].text = "Sr. No."
                 hdr[1].text = "PF Number"
                 hdr[2].text = "Employee Name"
@@ -639,7 +644,9 @@ if password == "sgam@4321":
                 word_path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
                 if word_path: download_word(word_path)
             elif letter_type == "Exam NOC":
-                filename = f"ExamNOC_Multi-{context['EmployeeData'][0]['PF Number']}-{len(context['EmployeeData'])}.docx"
+                # Assuming first employee is representative for filename
+                pf_for_name = context['EmployeeData'][0]['PF Number']
+                filename = f"ExamNOC_Multi-{pf_for_name}-{len(context['EmployeeData'])}.docx"
                 word_path = generate_word(template_files["Exam NOC"], context, filename)
                 if word_path: download_word(word_path)
                 st.success(f"Multi-Employee Exam NOC generated successfully for {len(context['EmployeeData'])} employees.")
