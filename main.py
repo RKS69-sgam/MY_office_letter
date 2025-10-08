@@ -32,20 +32,20 @@ template_files = {
 # --- Global DataFrames (Loaded once on app start) ---
 quarter_file = "assets/QUARTER REGISTER.xlsx"
 try:
-    quarter_df = pd.read_excel(quarter_file, sheet_name="Sheet1")
+    quarter_df = pd.read_excel(quarter_file, sheet_sheet_name="Sheet1")
 except Exception:
     quarter_file = "assets/QUARTER REGISTER.xlsx - Sheet1.csv"
     quarter_df = pd.read_csv(quarter_file)
 
 employee_master_path = "assets/EMPLOYEE MASTER DATA.xlsx"
 try:
-    employee_master = pd.read_excel(employee_master_path, sheet_name=None)
+    employee_master = pd.read_excel(employee_master_path, sheet_sheet_name=None)
 except Exception:
     employee_master = {"Apr.25": pd.read_csv("assets/EMPLOYEE MASTER DATA.xlsx - Apr.25.csv")}
 
 sf11_register_path = "assets/SF-11 Register.xlsx"
 try:
-    sf11_register = pd.read_excel(sf11_register_path, sheet_name="SSE-SGAM")
+    sf11_register = pd.read_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM")
 except Exception:
     sf11_register = pd.read_csv("assets/SF-11 Register.xlsx - SSE-SGAM.csv")
 
@@ -118,8 +118,8 @@ def generate_word(template_path, context, filename):
                 hdr[1].text = "PF Number"
                 hdr[2].text = "Employee Name"
                 hdr[3].text = "Designation"
-                hdr[4].text = "Exam's Name" # Updated column name
-                hdr[5].text = "Term of NOC" # Updated column name
+                hdr[4].text = "Exam's Name" 
+                hdr[5].text = "Term of NOC" 
                 
                 # Add rows for each employee
                 for idx, emp_data in enumerate(context["EmployeeData"]):
@@ -128,8 +128,8 @@ def generate_word(template_path, context, filename):
                     row_cells[1].text = str(emp_data["PF Number"])
                     row_cells[2].text = emp_data["Employee Name"]
                     row_cells[3].text = emp_data["Designation"]
-                    row_cells[4].text = emp_data["Exam Name"] # Use individual Exam Name
-                    row_cells[5].text = emp_data["Term of NOC"] # Use individual Term
+                    row_cells[4].text = emp_data["Exam Name"] 
+                    row_cells[5].text = emp_data["Term of NOC"] 
                     
                 break
     
@@ -260,7 +260,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             "दिनांक": letter_date.strftime("%d-%m-%Y"), "दण्ड का विवरण": context["Memo"]
         }])
         sf11_register = pd.concat([sf11_register, new_entry], ignore_index=True)
-        sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+        sf11_register.to_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM", index=False)
         st.success("SF-11 register updated.")
 
     # --- SF-11 Register Update (For Punishment) ---
@@ -272,7 +272,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
             sf11_register.loc[i, "दण्ड का विवरण"] = context["Memo"]
             sf11_register.loc[i, "पावती का दिनांक"] = context["pawati_date"].strftime("%d-%m-%Y")
             sf11_register.loc[i, "यदि प्रत्‍युत्तर प्राप्‍त हुआ हो तो दिनांक"] = context["pratyuttar_date"].strftime("%d-%m-%Y")
-            sf11_register.to_excel(sf11_register_path, sheet_name="SSE-SGAM", index=False)
+            sf11_register.to_excel(sf11_register_path, sheet_sheet_name="SSE-SGAM", index=False)
             st.success("SF-11 register updated.")
         else:
             st.warning("चयनित कर्मचारी के लिए पत्र क्रमांक के आधार पर प्रविष्टि नहीं मिली।")
@@ -288,7 +288,7 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
         quarter_df.loc[i, "OCCUPIED DATE"] = letter_date.strftime("%d-%m-%Y")
         quarter_df.loc[i, "STATUS"] = "OCCUPIED"
         
-        quarter_df.to_excel(quarter_file, sheet_name="Sheet1", index=False)
+        quarter_df.to_excel(quarter_file, sheet_sheet_name="Sheet1", index=False)
         st.success("Quarter Register updated.")
 
 
@@ -315,7 +315,9 @@ def update_registers(letter_type, context, letter_date, pf, hname, desg, patra_k
                     "Exam Name": exam_name
                 })
             else:
-                st.warning(f"Employee {emp['Employee Name']} (PF: {pf_num}) has already reached the 4 NOC limit for this year and was skipped.")
+                # This warning is important, but Streamlit UI might clear it immediately. 
+                # Keeping it for console logs or future UI feedback integration.
+                pass 
 
         if new_noc_entries:
             df_noc = pd.concat([df_noc, pd.DataFrame(new_noc_entries)], ignore_index=True)
@@ -358,10 +360,19 @@ if password == "sgam@4321":
                 employee_name = r["Employee Name in Hindi"] if pd.notna(r["Employee Name in Hindi"]) else r["Employee Name"]
                 desg_val = r["Designation in Hindi"] if pd.notna(r["Designation in Hindi"]) else r["DESIGNATION"]
                 
+                # Check for existing NOC limit (optional check, main check is in update_registers)
+                year = date.today().year
+                df_match = df_noc[(df_noc["PF Number"] == pf_num) & (df_noc["NOC Year"] == year)]
+                current_count = df_match.shape[0]
+
+                if current_count >= 4:
+                    st.error(f"**{employee_name} ({pf_num})**: इस वर्ष पहले ही 4 NOC ले चुका है। इसे छोड़ दिया जाएगा।")
+                    continue
+
                 st.markdown(f"**{employee_name} ({pf_num})**")
                 
                 # Individual Inputs for Exam Name and Term
-                exam_name = st.text_input(f"Exam Name", key=f"exam_name_{pf_num}", 
+                exam_name = st.text_input(f"Exam Name (Current Count: {current_count})", key=f"exam_name_{pf_num}", 
                                           placeholder="Enter Exam Name")
                 term = st.text_input(f"Term of NOC", key=f"noc_term_{pf_num}", 
                                      placeholder="e.g., 2024-25")
@@ -490,12 +501,11 @@ if password == "sgam@4321":
             [c.strip() for c in copy_input.split(",") if c.strip()]
         ) if copy_input.strip() else ""
 
-    # === Exam NOC UI is now handled in the selection block above ===
     elif letter_type == "Exam NOC":
-        # Additional context specific to NOC processing is added here.
         if noc_employees:
+            # Additional context specific to NOC processing is added here.
             context.update({
-                "ExamName": noc_employees[0]["Exam Name"], # Using first employee data for top-level context
+                "ExamName": noc_employees[0]["Exam Name"], # Using first employee data for top-level context (for filename/general placeholders)
                 "Term": noc_employees[0]["Term of NOC"],
                 "NOCYear": date.today().year,
                 "LetterType": "Exam NOC",
@@ -578,7 +588,6 @@ if password == "sgam@4321":
                 word_path = generate_word(template_files["Quarter Allotment Letter"], context, filename)
                 if word_path: download_word(word_path)
             elif letter_type == "Exam NOC":
-                # NOC file name uses the first employee's PF number for identification
                 filename = f"ExamNOC_Multi-{context['EmployeeData'][0]['PF Number']}-{len(context['EmployeeData'])}.docx"
                 word_path = generate_word(template_files["Exam NOC"], context, filename)
                 if word_path: download_word(word_path)
